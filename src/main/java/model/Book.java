@@ -11,6 +11,7 @@ public class Book {
     private boolean isBorrowed;
     private LocalDate dueDate;
     private User borrowedBy; // المستخدم الذي استعار الكتاب
+    private boolean fineIssued; // ⚠ جديد: لتجنب مضاعفة الغرامة
 
     public Book(String title, String author, String isbn) {
         this.title = title;
@@ -19,6 +20,7 @@ public class Book {
         this.isBorrowed = false;
         this.dueDate = null;
         this.borrowedBy = null;
+        this.fineIssued = false;
     }
 
     // ===== Getters =====
@@ -28,11 +30,13 @@ public class Book {
     public boolean isBorrowed() { return isBorrowed; }
     public LocalDate getDueDate() { return dueDate; }
     public User getBorrowedBy() { return borrowedBy; }
+    public boolean isFineIssued() { return fineIssued; }
 
     // ===== Setters =====
     public void setBorrowed(boolean borrowed) { this.isBorrowed = borrowed; }
     public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
     public void setBorrowedBy(User user) { this.borrowedBy = user; }
+    public void setFineIssued(boolean fineIssued) { this.fineIssued = fineIssued; }
 
     // ====================================================
     //              🔹 استعارة الكتاب
@@ -44,6 +48,7 @@ public class Book {
         this.isBorrowed = true;
         this.dueDate = LocalDate.now().plusDays(28);
         this.borrowedBy = user;
+        this.fineIssued = false; // عند استعارة جديدة، الغرامة لم تصدر بعد
     }
 
     // ====================================================
@@ -53,6 +58,7 @@ public class Book {
         this.isBorrowed = false;
         this.dueDate = null;
         this.borrowedBy = null;
+        this.fineIssued = false; // عند الإرجاع، يتم تصفير العلم
     }
 
     // ====================================================
@@ -74,6 +80,7 @@ public class Book {
                 ",\n  Borrowed = " + isBorrowed +
                 ",\n  Due Date = " + dueDate +
                 (borrowedBy != null ? ",\n  Borrowed By = " + borrowedBy.getName() : "") +
+                ",\n  Fine Issued = " + fineIssued +
                 "\n}";
     }
 
@@ -86,11 +93,12 @@ public class Book {
                isbn + ";" +
                isBorrowed + ";" +
                (dueDate != null ? dueDate.toString() : "null") + ";" +
-               (borrowedBy != null ? borrowedBy.getName() : "null");
+               (borrowedBy != null ? borrowedBy.getName() : "null") + ";" +
+               fineIssued; // ⚠ حفظ العلم مع الكتاب
     }
 
     // ====================================================
-    //              🔹 إنشاء كتاب من سطر في الملف — بعد التصحيح
+    //              🔹 إنشاء كتاب من سطر في الملف
     // ====================================================
     public static Book fromFileString(String line) {
         String[] parts = line.split(";", -1);
@@ -106,6 +114,11 @@ public class Book {
         if (!parts[5].equals("null") && !parts[5].isBlank()) {
             User u = new User(parts[5], "", "User");
             book.setBorrowedBy(u);
+        }
+
+        if (parts.length > 6) {
+            boolean fineIssued = Boolean.parseBoolean(parts[6]);
+            book.setFineIssued(fineIssued);
         }
 
         return book;
