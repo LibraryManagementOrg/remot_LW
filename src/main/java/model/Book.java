@@ -43,7 +43,7 @@ public class Book {
         }
         this.isBorrowed = true;
         this.dueDate = LocalDate.now().plusDays(28);
-        this.borrowedBy = user; // نخزن اسم المستخدم
+        this.borrowedBy = user;
     }
 
     // ====================================================
@@ -90,19 +90,20 @@ public class Book {
     }
 
     // ====================================================
-    //              🔹 إنشاء كتاب من سطر في الملف
+    //              🔹 إنشاء كتاب من سطر في الملف — بعد التصحيح
     // ====================================================
     public static Book fromFileString(String line) {
-        String[] parts = line.split(";", -1); // -1 للحفاظ على جميع الفواصل
+        String[] parts = line.split(";", -1);
         Book book = new Book(parts[0], parts[1], parts[2]);
-        book.setBorrowed(Boolean.parseBoolean(parts[3]));
+
+        boolean borrowed = Boolean.parseBoolean(parts[3]);
+        book.setBorrowed(borrowed);
 
         if (!parts[4].equals("null") && !parts[4].isBlank()) {
             book.setDueDate(LocalDate.parse(parts[4]));
         }
 
         if (!parts[5].equals("null") && !parts[5].isBlank()) {
-            // إذا أردت لاحقاً ربط اسم المستخدم بكائن User حقيقي
             User u = new User(parts[5], "", "User");
             book.setBorrowedBy(u);
         }
