@@ -64,11 +64,11 @@ public class mymain {
         while (true) {
             System.out.println("\n===== ADMIN MENU =====");
             System.out.println("1. Add Book");
-            System.out.println("2. Add CD");
+            System.out.println("2. Add CD"); // ✅ مفعل الآن
             System.out.println("3. Search Media");
-            System.out.println("4. Send Reminder Emails"); // ✅ تم التفعيل
-            System.out.println("5. Unregister User");      // ✅ تم التفعيل
-            System.out.println("6. View All Books & Overdue");
+            System.out.println("4. Send Reminder Emails");
+            System.out.println("5. Unregister User");
+            System.out.println("6. View All Media (Books & CDs)");
             System.out.println("7. Logout");
             System.out.println("======================");
             System.out.print("Enter your choice: ");
@@ -99,7 +99,18 @@ public class mymain {
                     break;
 
                 case 2:
-                    System.out.println("🎵 Add CD feature coming soon...");
+                    // ✅ US5.1: إضافة CD
+                    if (!adminService.isLoggedIn()) {
+                        System.out.println("⚠ Please log in as Admin first!");
+                        break;
+                    }
+                    System.out.print("Enter CD Title: ");
+                    String cdTitle = scanner.nextLine();
+                    System.out.print("Enter Artist: ");
+                    String artist = scanner.nextLine();
+                    System.out.print("Enter Barcode: ");
+                    String barcode = scanner.nextLine();
+                    bookService.addCD(cdTitle, artist, barcode);
                     break;
 
                 case 3:
@@ -110,7 +121,8 @@ public class mymain {
 
                 case 4:
                     // ✅ تفعيل إرسال الإيميلات
-                	 //  adminService.sendOverdueReminders(userService.getAllUsers(), bookService.getAllBooks());
+                    // ملاحظة: تأكد أن AdminService تم تحديثه ليقبل List<Media> كما شرحنا سابقاً
+                	//adminService.sendOverdueReminders(userService.getAllUsers(), bookService.getAllBooks());
                     break;
 
                 case 5:
@@ -124,22 +136,26 @@ public class mymain {
                     break;
 
                 case 6:
-                    System.out.println("📚 All Books Status:");
-                    boolean hasBooks = false;
-                    for (Book b : bookService.getAllBooks()) {
-                        hasBooks = true;
+                    // ✅ تعديل العرض ليشمل Media بدلاً من Book فقط
+                    System.out.println("📚 All Media Status:");
+                    boolean hasItems = false;
+                    
+                    // نستخدم Media لأنه الأب المشترك للكتب والسيديات
+                    for (media m : bookService.getAllBooks()) { 
+                        hasItems = true;
                         String status;
-                        if (b.isBorrowed()) {
-                            status = "🔴 Borrowed by " + (b.getBorrowedBy() != null ? b.getBorrowedBy().getName() : "Unknown") +
-                                     " | Due: " + b.getDueDate();
-                            if (b.isOverdue()) status += " ⚠ OVERDUE";
-                            if (b.isFineIssued()) status += " ($ Fine Calc)";
+                        if (m.isBorrowed()) {
+                            status = "🔴 Borrowed by " + (m.getBorrowedBy() != null ? m.getBorrowedBy().getName() : "Unknown") +
+                                     " | Due: " + m.getDueDate();
+                            if (m.isOverdue()) status += " ⚠ OVERDUE";
+                            if (m.isFineIssued()) status += " ($ Fine Calc)";
                         } else {
                             status = "🟢 Available";
                         }
-                        System.out.println("- " + b.getTitle() + " | " + status);
+                        // Polymorphism: m.toString() will behave differently for Book vs CD
+                        System.out.println(m.toString() + " | " + status);
                     }
-                    if (!hasBooks) System.out.println("No books in library.");
+                    if (!hasItems) System.out.println("No items in library.");
                     break;
 
                 case 7:
@@ -156,9 +172,9 @@ public class mymain {
     public static void userMenu(User user) {
         while (true) {
             System.out.println("\n===== USER MENU =====");
-            System.out.println("1. Search Book");
-            System.out.println("2. Borrow Book");
-            System.out.println("3. Return Book");
+            System.out.println("1. Search Media");
+            System.out.println("2. Borrow Item (Book/CD)");
+            System.out.println("3. Return Item");
             System.out.println("4. Pay Fine");
             System.out.println("5. Logout");
             System.out.println("======================");
@@ -183,22 +199,22 @@ public class mymain {
 
                 case 2:
                     if (user.getOutstandingFine() > 0) {
-                        System.out.println("❌ You cannot borrow books until you pay your fines. Outstanding fine: " + user.getOutstandingFine());
+                        System.out.println("❌ You cannot borrow items until you pay your fines. Outstanding fine: " + user.getOutstandingFine());
                         break;
                     }
-                    System.out.print("Enter ISBN of the book to borrow: ");
-                    String isbn = scanner.nextLine();
-                    bookService.borrowBook(user, isbn);
+                    System.out.print("Enter ISBN (Book) or Barcode (CD) to borrow: ");
+                    String id = scanner.nextLine();
+                    bookService.borrowBook(user, id); // الدالة الآن تدعم الاثنين
                     break;
 
                 case 3:
                     if (user.getOutstandingFine() > 0) {
-                        System.out.println("❌ You cannot return books until you pay your fines. Outstanding fine: " + user.getOutstandingFine());
+                        System.out.println("❌ You cannot return items until you pay your fines (Logic from previous sprint). Outstanding fine: " + user.getOutstandingFine());
                         break;
                     }
-                    System.out.print("Enter ISBN of the book to return: ");
-                    String returnIsbn = scanner.nextLine();
-                    bookService.returnBook(returnIsbn, user);
+                    System.out.print("Enter ISBN or Barcode to return: ");
+                    String returnId = scanner.nextLine();
+                    bookService.returnBook(returnId, user);
                     break;
 
                 case 4:
@@ -238,7 +254,7 @@ public class mymain {
 
         while (true) {
             System.out.println("\n===== LIBRARIAN MENU =====");
-            System.out.println("1. Show Overdue Books");
+            System.out.println("1. Show Overdue Items");
             System.out.println("2. Issue Fines (Calculate & Show)");
             System.out.println("3. Logout");
             System.out.println("===========================");

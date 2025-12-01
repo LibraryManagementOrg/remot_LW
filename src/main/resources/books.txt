@@ -1,7 +1,3 @@
-rtgtrh;4342r;3234;false;null;null;false
-romio;dewfwe;2332;false;null;null;false
-lll;hihu;1314;true;2025-12-29;ahmad;false
-rwfrw;4343;2344;false;null;null;false
-jkdcd;e32e3;2321;false;null;null;false
-lll;322r;23451;true;2025-12-29;waad;false
-tyujyki;67utygj;45354;false;null;null;false
+BOOK;frfcsdf;3rf3w;2345;true;2025-11-29;ahmad;true
+CD;frfe;fw433;24242;true;2025-11-08;waad;true
+CD;rgrg;r3wr;12345;false;null;null;false

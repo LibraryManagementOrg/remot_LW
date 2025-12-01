@@ -4,6 +4,7 @@ import java.util.List;
 
 import model.Book;
 import model.User;
+import model.media;
 
 public class AdminService {
 
@@ -40,7 +41,7 @@ public class AdminService {
             return;
         }
 
-        List<Book> allBooks = bookService.getAllBooks();
+        List<media> allBooks = bookService.getAllBooks();
 
         if (allBooks.isEmpty()) {
             System.out.println("No books available.");
@@ -48,7 +49,7 @@ public class AdminService {
         }
 
         System.out.println("📚 All Books:");
-        for (Book b : allBooks) {
+        for (media b : allBooks) {
             System.out.println(b);
         }
     }
@@ -78,7 +79,7 @@ public class AdminService {
 
         // 4. التحقق من الكتب المستعارة (Condition: No active loans)
         boolean hasActiveLoans = false;
-        for (Book b : bookService.getAllBooks()) {
+        for (media b : bookService.getAllBooks()) {
             if (b.isBorrowed() && 
                 b.getBorrowedBy() != null && 
                 b.getBorrowedBy().getName().equalsIgnoreCase(username)) {

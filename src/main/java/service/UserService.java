@@ -1,9 +1,10 @@
 package service;
 
 import model.User;
-import model.Book;
-
+import model.media; // تأكد من استيراد Media
 import java.io.*;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,7 +19,7 @@ public class UserService {
         loadUsersFromFile(FILE_PATH);
     }
 
-    // تحميل المستخدمين من الملف
+    // تحميل المستخدمين
     private void loadUsersFromFile(String filePath) {
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
@@ -30,18 +31,13 @@ public class UserService {
                     String password = parts[1].trim();
                     String role = parts[2].trim();
                     double fine = 0.0;
-
                     if (parts.length > 3) {
                         try { fine = Double.parseDouble(parts[3]); }
                         catch (NumberFormatException e) { fine = 0.0; }
                     }
-
                     User user = new User(username, password, role);
                     user.setOutstandingFine(fine);
                     users.add(user);
-
-                } else {
-                    System.out.println("⚠ Skipping corrupted user line: " + line);
                 }
             }
         } catch (IOException e) {
@@ -56,18 +52,15 @@ public class UserService {
                 loggedInUser = user;
                 System.out.println("✅ " + username + " logged in successfully as " + user.getRole() + ".");
 
-                // تحديث شامل للغرامات عند دخول أي شخص
                 if (bookService != null) {
                     checkAndApplyFinesForAllUsers(bookService);
                 }
-
                 return user;
             }
         }
         System.out.println("❌ Invalid username or password.");
         return null;
     }
-
 
     public void logout() {
         if (loggedInUser != null) {
@@ -79,118 +72,129 @@ public class UserService {
     public boolean isLoggedIn() { return loggedInUser != null; }
     public User getLoggedInUser() { return loggedInUser; }
 
-
-    // ===== دفع الغرامة =====
+    // =============================================================
+    // 💰 دفع الغرامة + تقرير تفصيلي (US5.3 Mixed Media Handling)
+    // =============================================================
     public void payFine(User user, double amount, BookService bookService) {
         if (loggedInUser == null || !loggedInUser.equals(user)) {
             System.out.println("❌ Access denied! User must be logged in to pay fine.");
             return;
         }
 
+        // 1️⃣ عرض تقرير مفصل للغرامات (كتب vs سيديات)
+        System.out.println("\n📊 --- YOUR FINE BREAKDOWN ---");
+        boolean hasOverdueItems = false;
+
+        if (bookService != null) {
+            for (media m : bookService.getAllBooks()) {
+                if (m.isBorrowed() && 
+                    m.getBorrowedBy() != null && 
+                    m.getBorrowedBy().getName().equalsIgnoreCase(user.getName()) && 
+                    m.isOverdue()) {
+
+                    hasOverdueItems = true;
+                    long days = ChronoUnit.DAYS.between(m.getDueDate(), LocalDate.now());
+                    double itemFine = m.getFineAmount(); // يستخدم الاستراتيجية (10 للكتاب، 20 للسي دي)
+                    
+                    // تحديد النوع للطباعة (Book أو CD)
+                    String type = m.getClass().getSimpleName(); 
+
+                    System.out.println(String.format("🔴 [%s] %s | Overdue: %d days | Fine: %.1f NIS", 
+                            type, m.getTitle(), days, itemFine));
+                }
+            }
+        }
+
+        if (!hasOverdueItems && user.getOutstandingFine() > 0) {
+            System.out.println("⚠ You have unpaid fines from previous returns.");
+        }
+        
+        System.out.println("-------------------------------------");
+        System.out.println("💰 Total Outstanding Balance: " + user.getOutstandingFine() + " NIS");
+        System.out.println("-------------------------------------\n");
+
+        // 2️⃣ التحقق من المبلغ المدخل
         if (amount <= 0) {
-            System.out.println("❌ Invalid amount.");
+            System.out.println("❌ Invalid amount. Please enter a positive value.");
             return;
         }
 
         if (amount > user.getOutstandingFine()) {
-            System.out.println("❌ Error: You cannot pay more than the outstanding fine (" + user.getOutstandingFine() + ")");
+            System.out.println("❌ Error: You entered " + amount + ", but your fine is only " + user.getOutstandingFine());
             return;
         }
 
+        // 3️⃣ الخصم
         user.setOutstandingFine(user.getOutstandingFine() - amount);
 
-        // إرجاع الكتب فقط عند تصفير الدين بالكامل
+        // 4️⃣ إرجاع الكتب تلقائياً عند تصفير الدين
         if (user.getOutstandingFine() == 0 && bookService != null) {
-            boolean booksReturned = false;
-            for (Book b : bookService.getAllBooks()) {
-                if (b.isBorrowed() &&
-                    b.getBorrowedBy() != null &&
-                    b.getBorrowedBy().getName().equalsIgnoreCase(user.getName()) &&
-                    b.isOverdue()) {
+            boolean itemsReturned = false;
+            for (media m : bookService.getAllBooks()) {
+                if (m.isBorrowed() &&
+                    m.getBorrowedBy() != null &&
+                    m.getBorrowedBy().getName().equalsIgnoreCase(user.getName()) &&
+                    m.isOverdue()) {
 
-                    b.setBorrowed(false);
-                    b.setBorrowedBy(null);
-                    b.setDueDate(null);
-                    b.setFineIssued(false); // إعادة التعيين لأن الكتاب رجع
+                    m.setBorrowed(false);
+                    m.setBorrowedBy(null);
+                    m.setDueDate(null);
+                    m.setFineIssued(false);
 
-                    System.out.println("📘 Returned overdue book automatically: " + b.getTitle());
-                    booksReturned = true;
+                    System.out.println("📘 Automatically returned: [" + m.getClass().getSimpleName() + "] " + m.getTitle());
+                    itemsReturned = true;
                 }
             }
-            if (booksReturned) bookService.saveBooksToFile();
+            if (itemsReturned) bookService.saveBooksToFile();
         }
 
         saveUsersToFile();
-        System.out.println("✅ Fine paid successfully. Remaining balance: " + user.getOutstandingFine());
+        System.out.println("✅ Payment successful. Remaining balance: " + user.getOutstandingFine());
     }
 
-
-    // ===== 🌟 تحديث الغرامات لجميع المستخدمين دفعة واحدة 🌟 =====
+    // تحديث الغرامات
     public void checkAndApplyFinesForAllUsers(BookService bookService) {
         boolean usersUpdated = false;
         boolean booksUpdated = false;
 
-        for (Book b : bookService.getAllBooks()) {
-            if (b.isBorrowed() 
-                && b.isOverdue() 
-                && !b.isFineIssued() 
-                && b.getBorrowedBy() != null) {
-
-                User borrower = findUserByName(b.getBorrowedBy().getName());
-
+        for (media m : bookService.getAllBooks()) {
+            if (m.isBorrowed() && m.isOverdue() && !m.isFineIssued() && m.getBorrowedBy() != null) {
+                User borrower = findUserByName(m.getBorrowedBy().getName());
                 if (borrower != null) {
-                    double fine = b.getFineAmount();
+                    double fine = m.getFineAmount();
                     borrower.setOutstandingFine(borrower.getOutstandingFine() + fine);
-                    b.setFineIssued(true);
-
+                    m.setFineIssued(true);
                     usersUpdated = true;
                     booksUpdated = true;
                 }
             }
         }
-
         if (usersUpdated) saveUsersToFile();
         if (booksUpdated) bookService.saveBooksToFile();
     }
 
-
-    // ==========================================
-    // 🗑️ دالة حذف المستخدم (Unregister User) - جديد
-    // ==========================================
     public boolean deleteUser(String username) {
         User userToRemove = null;
-        
-        // البحث عن المستخدم
         for (User u : users) {
             if (u.getName().equalsIgnoreCase(username)) {
                 userToRemove = u;
                 break;
             }
         }
-
-        // الحذف والحفظ
         if (userToRemove != null) {
             users.remove(userToRemove);
             saveUsersToFile();
-            System.out.println("🗑 User [" + username + "] has been permanently deleted.");
+            System.out.println("🗑 User [" + username + "] deleted.");
             return true;
-        } else {
-            // لا نطبع خطأ هنا، نترك التحكم لـ AdminService
-            return false;
         }
+        return false;
     }
-
 
     public void addFine(User user, double amount) {
         if (amount <= 0) return;
         user.setOutstandingFine(user.getOutstandingFine() + amount);
         saveUsersToFile();
-        System.out.println("⚠ Fine added to " + user.getName() + ": " + amount +
-                " | Total outstanding: " + user.getOutstandingFine());
     }
-
-    public boolean canBorrow(User user) { return user.getOutstandingFine() <= 0; }
-    public boolean canReturn(User user) { return user.getOutstandingFine() <= 0; }
 
     public User findUserByName(String username) {
         for (User u : users) {
@@ -204,7 +208,6 @@ public class UserService {
     public void saveUsersToFile() {
         try (PrintWriter pw = new PrintWriter(new FileWriter(FILE_PATH))) {
             for (User u : users) {
-                // ملاحظة: إذا قمت بدمج الإيميل لاحقاً، تذكر تعديل هذا السطر ليحفظ الإيميل أيضاً
                 pw.println(u.getName() + "," + u.getPassword() + "," + u.getRole() + "," + u.getOutstandingFine());
             }
         } catch (IOException e) {
