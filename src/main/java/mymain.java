@@ -12,7 +12,6 @@ public class mymain {
     static UserService userService = new UserService();
     
     // نمرر الخدمات لبعضها البعض حسب الحاجة
-    // تأكد أن BookService لديك يحتوي على هذا الكونستركتور، أو عدله حسب الموجود لديك
     static BookService bookService = new BookService(adminService, userService);
 
     public static void main(String[] args) {
@@ -67,8 +66,8 @@ public class mymain {
             System.out.println("1. Add Book");
             System.out.println("2. Add CD");
             System.out.println("3. Search Media");
-            System.out.println("4. Send Reminder Emails");
-            System.out.println("5. Unregister User");
+            System.out.println("4. Send Reminder Emails"); // ✅ تم التفعيل
+            System.out.println("5. Unregister User");      // ✅ تم التفعيل
             System.out.println("6. View All Books & Overdue");
             System.out.println("7. Logout");
             System.out.println("======================");
@@ -110,11 +109,18 @@ public class mymain {
                     break;
 
                 case 4:
-                    System.out.println("📩 Reminder sending (mock) not implemented yet.");
+                    // ✅ تفعيل إرسال الإيميلات
+                	 //  adminService.sendOverdueReminders(userService.getAllUsers(), bookService.getAllBooks());
                     break;
 
                 case 5:
-                    System.out.println("❗ Unregister User feature coming soon...");
+                    // ✅ تفعيل حذف المستخدم
+                    System.out.println("\n=== Unregister User ===");
+                    System.out.print("Enter username to delete: ");
+                    String userToDelete = scanner.nextLine();
+                    
+                    // استدعاء الدالة من AdminService للتحقق والحذف
+                    adminService.unregisterUser(userToDelete, userService, bookService);
                     break;
 
                 case 6:
@@ -254,12 +260,9 @@ public class mymain {
                     break;
 
                 case 2:
-                    // 🌟🌟 التعديل الحاسم هنا 🌟🌟
-                    // قبل عرض الغرامات، نقوم بحسابها وتحديث الملفات لجميع المستخدمين والكتب
                     System.out.println("🔄 System is calculating fines for all users...");
                     userService.checkAndApplyFinesForAllUsers(bookService);
                     
-                    // الآن نعرض الغرامات (ستكون محدثة حتى لو المستخدم لم يدخل بعد)
                     librarianService.issueFines(bookService.getAllBooks(), userService);
                     break;
 

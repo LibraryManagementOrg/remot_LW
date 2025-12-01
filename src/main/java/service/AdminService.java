@@ -32,7 +32,8 @@ public class AdminService {
     public boolean isLoggedIn() {
         return loggedIn;
     }
- // --- عرض جميع الكتب ---
+
+    // --- عرض جميع الكتب ---
     public void showAllBooks(BookService bookService) {
         if (!loggedIn) {
             System.out.println("❌ Access denied! Please log in as admin.");
@@ -49,6 +50,53 @@ public class AdminService {
         System.out.println("📚 All Books:");
         for (Book b : allBooks) {
             System.out.println(b);
+        }
+    }
+
+    // =========================================================
+    // 🛑 US4.2: إلغاء تسجيل المستخدم (Unregister User) 🛑
+    // =========================================================
+    public void unregisterUser(String username, UserService userService, BookService bookService) {
+        // 1. التحقق من صلاحية الأدمن
+        if (!loggedIn) {
+            System.out.println("❌ Access denied! Only admins can unregister users.");
+            return;
+        }
+
+        // 2. البحث عن المستخدم
+        User user = userService.findUserByName(username);
+        if (user == null) {
+            System.out.println("❌ User not found: " + username);
+            return;
+        }
+
+        // 3. التحقق من الغرامات (Condition: No unpaid fines)
+        if (user.getOutstandingFine() > 0) {
+            System.out.println("⛔ Cannot delete user! They have unpaid fines: " + user.getOutstandingFine());
+            return;
+        }
+
+        // 4. التحقق من الكتب المستعارة (Condition: No active loans)
+        boolean hasActiveLoans = false;
+        for (Book b : bookService.getAllBooks()) {
+            if (b.isBorrowed() && 
+                b.getBorrowedBy() != null && 
+                b.getBorrowedBy().getName().equalsIgnoreCase(username)) {
+                hasActiveLoans = true;
+                break;
+            }
+        }
+
+        if (hasActiveLoans) {
+            System.out.println("⛔ Cannot delete user! They still have borrowed books.");
+            return;
+        }
+
+        // 5. إذا تجاوز كل الشروط، قم بالحذف
+        // نستدعي الدالة التي أضفناها في UserService
+        boolean deleted = userService.deleteUser(username);
+        if (deleted) {
+            System.out.println("✅ User [" + username + "] unregistered successfully.");
         }
     }
 

@@ -125,43 +125,59 @@ public class UserService {
     }
 
 
-    // ===== 🌟 الدالة الجديدة: تحديث الغرامات لجميع المستخدمين دفعة واحدة 🌟 =====
-    // هذه الدالة تضمن أن اللايبراين يرى الغرامات حتى لو المستخدم لم يدخل بعد
+    // ===== 🌟 تحديث الغرامات لجميع المستخدمين دفعة واحدة 🌟 =====
     public void checkAndApplyFinesForAllUsers(BookService bookService) {
         boolean usersUpdated = false;
         boolean booksUpdated = false;
 
         for (Book b : bookService.getAllBooks()) {
-            // الشروط: مستعار + متأخر + لم يتم حساب الغرامة مسبقاً
             if (b.isBorrowed() 
                 && b.isOverdue() 
                 && !b.isFineIssued() 
                 && b.getBorrowedBy() != null) {
 
-                // البحث عن المستخدم صاحب الكتاب في قائمة المستخدمين
                 User borrower = findUserByName(b.getBorrowedBy().getName());
 
                 if (borrower != null) {
                     double fine = b.getFineAmount();
-                    
-                    // إضافة الغرامة للمستخدم
                     borrower.setOutstandingFine(borrower.getOutstandingFine() + fine);
-                    
-                    // وضع علامة أن الغرامة حُسبت حتى لا تتكرر
                     b.setFineIssued(true);
 
                     usersUpdated = true;
                     booksUpdated = true;
-                    
-                    // طباعة توضيحية (اختياري، يمكن حذفها إذا أردت الهدوء)
-                    // System.out.println("💰 System updated fine for " + borrower.getName() + ": +" + fine);
                 }
             }
         }
 
-        // حفظ التغييرات في الملفات فوراً
         if (usersUpdated) saveUsersToFile();
         if (booksUpdated) bookService.saveBooksToFile();
+    }
+
+
+    // ==========================================
+    // 🗑️ دالة حذف المستخدم (Unregister User) - جديد
+    // ==========================================
+    public boolean deleteUser(String username) {
+        User userToRemove = null;
+        
+        // البحث عن المستخدم
+        for (User u : users) {
+            if (u.getName().equalsIgnoreCase(username)) {
+                userToRemove = u;
+                break;
+            }
+        }
+
+        // الحذف والحفظ
+        if (userToRemove != null) {
+            users.remove(userToRemove);
+            saveUsersToFile();
+            System.out.println("🗑 User [" + username + "] has been permanently deleted.");
+            return true;
+        } else {
+            // لا نطبع خطأ هنا، نترك التحكم لـ AdminService
+            return false;
+        }
     }
 
 
@@ -188,6 +204,7 @@ public class UserService {
     public void saveUsersToFile() {
         try (PrintWriter pw = new PrintWriter(new FileWriter(FILE_PATH))) {
             for (User u : users) {
+                // ملاحظة: إذا قمت بدمج الإيميل لاحقاً، تذكر تعديل هذا السطر ليحفظ الإيميل أيضاً
                 pw.println(u.getName() + "," + u.getPassword() + "," + u.getRole() + "," + u.getOutstandingFine());
             }
         } catch (IOException e) {
