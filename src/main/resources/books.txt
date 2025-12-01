@@ -1,6 +1,6 @@
-rtgtrh;4342r;3234;true;2025-11-29;ahmad;false
-romio;dewfwe;2332;true;2025-12-29;waad;false
-lll;hihu;1314;true;2025-12-29;ahmad;false
+rtgtrh;4342r;3234;false;null;null;false
+romio;dewfwe;2332;false;null;null;false
+lll;hihu;1314;false;null;null;false
 rwfrw;4343;2344;false;null;null;false
-jkdcd;e32e3;2321;true;2025-12-28;ahmad;false
-lll;322r;23451;true;2025-10-29;waad;false
+jkdcd;e32e3;2321;false;null;null;false
+lll;322r;23451;false;null;null;false

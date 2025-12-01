@@ -9,126 +9,189 @@ import java.util.List;
 
 public class UserService {
 
-private List<User> users;
-private User loggedInUser;
-private final String FILE_PATH = "src/main/resources/users.txt";
+    private List<User> users;
+    private User loggedInUser;
+    private final String FILE_PATH = "src/main/resources/users.txt";
 
-public UserService() {
-    users = new ArrayList<>();
-    loadUsersFromFile(FILE_PATH);
-}
+    public UserService() {
+        users = new ArrayList<>();
+        loadUsersFromFile(FILE_PATH);
+    }
 
-// 🔹 تحميل المستخدمين من الملف
-private void loadUsersFromFile(String filePath) {
-    try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
-        String line;
-        while ((line = br.readLine()) != null) {
-            if (line.trim().isEmpty()) continue;
-            String[] parts = line.split(",");
-            if (parts.length >= 3) {
-                String username = parts[0].trim();
-                String password = parts[1].trim();
-                String role = parts[2].trim();
-                double fine = 0.0;
-                if (parts.length > 3) {
-                    try { fine = Double.parseDouble(parts[3]); }
-                    catch (NumberFormatException e) { fine = 0.0; }
+    // تحميل المستخدمين من الملف
+    private void loadUsersFromFile(String filePath) {
+        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.trim().isEmpty()) continue;
+                String[] parts = line.split(",");
+                if (parts.length >= 3) {
+                    String username = parts[0].trim();
+                    String password = parts[1].trim();
+                    String role = parts[2].trim();
+                    double fine = 0.0;
+
+                    if (parts.length > 3) {
+                        try { fine = Double.parseDouble(parts[3]); }
+                        catch (NumberFormatException e) { fine = 0.0; }
+                    }
+
+                    User user = new User(username, password, role);
+                    user.setOutstandingFine(fine);
+                    users.add(user);
+
+                } else {
+                    System.out.println("⚠ Skipping corrupted user line: " + line);
                 }
-                User user = new User(username, password, role);
-                user.setOutstandingFine(fine);
-                users.add(user);
-            } else {
-                System.out.println("⚠ Skipping corrupted user line: " + line);
+            }
+        } catch (IOException e) {
+            System.out.println("⚠ Error reading users file: " + e.getMessage());
+        }
+    }
+
+    // تسجيل الدخول
+    public User login(String username, String password, BookService bookService) {
+        for (User user : users) {
+            if (user.getName().equals(username) && user.getPassword().equals(password)) {
+                loggedInUser = user;
+                System.out.println("✅ " + username + " logged in successfully as " + user.getRole() + ".");
+
+                // تحديث شامل للغرامات عند دخول أي شخص
+                if (bookService != null) {
+                    checkAndApplyFinesForAllUsers(bookService);
+                }
+
+                return user;
             }
         }
-    } catch (IOException e) {
-        System.out.println("⚠ Error reading users file: " + e.getMessage());
+        System.out.println("❌ Invalid username or password.");
+        return null;
     }
-}
 
-// 🔹 تسجيل الدخول بدون إعادة حساب الغرامة
-public User login(String username, String password) {
-    for (User user : users) {
-        if (user.getName().equals(username) && user.getPassword().equals(password)) {
-            loggedInUser = user;
-            System.out.println("✅ " + username + " logged in successfully as " + user.getRole() + ".");
-            return user;
+
+    public void logout() {
+        if (loggedInUser != null) {
+            System.out.println("🔒 " + loggedInUser.getName() + " logged out successfully.");
+            loggedInUser = null;
         }
     }
-    System.out.println("❌ Invalid username or password.");
-    return null;
-}
 
-// 🔹 تسجيل الخروج
-public void logout() {
-    if (loggedInUser != null) {
-        System.out.println("🔒 " + loggedInUser.getName() + " logged out successfully.");
-        loggedInUser = null;
+    public boolean isLoggedIn() { return loggedInUser != null; }
+    public User getLoggedInUser() { return loggedInUser; }
+
+
+    // ===== دفع الغرامة =====
+    public void payFine(User user, double amount, BookService bookService) {
+        if (loggedInUser == null || !loggedInUser.equals(user)) {
+            System.out.println("❌ Access denied! User must be logged in to pay fine.");
+            return;
+        }
+
+        if (amount <= 0) {
+            System.out.println("❌ Invalid amount.");
+            return;
+        }
+
+        if (amount > user.getOutstandingFine()) {
+            System.out.println("❌ Error: You cannot pay more than the outstanding fine (" + user.getOutstandingFine() + ")");
+            return;
+        }
+
+        user.setOutstandingFine(user.getOutstandingFine() - amount);
+
+        // إرجاع الكتب فقط عند تصفير الدين بالكامل
+        if (user.getOutstandingFine() == 0 && bookService != null) {
+            boolean booksReturned = false;
+            for (Book b : bookService.getAllBooks()) {
+                if (b.isBorrowed() &&
+                    b.getBorrowedBy() != null &&
+                    b.getBorrowedBy().getName().equalsIgnoreCase(user.getName()) &&
+                    b.isOverdue()) {
+
+                    b.setBorrowed(false);
+                    b.setBorrowedBy(null);
+                    b.setDueDate(null);
+                    b.setFineIssued(false); // إعادة التعيين لأن الكتاب رجع
+
+                    System.out.println("📘 Returned overdue book automatically: " + b.getTitle());
+                    booksReturned = true;
+                }
+            }
+            if (booksReturned) bookService.saveBooksToFile();
+        }
+
+        saveUsersToFile();
+        System.out.println("✅ Fine paid successfully. Remaining balance: " + user.getOutstandingFine());
     }
-}
 
-public boolean isLoggedIn() { return loggedInUser != null; }
-public User getLoggedInUser() { return loggedInUser; }
 
-// ===== إدارة الغرامات =====
-public void payFine(User user, double amount, BookService bookService) {
-    if (loggedInUser == null || !loggedInUser.equals(user)) {
-        System.out.println("❌ Access denied! User must be logged in to pay fine.");
-        return;
-    }
+    // ===== 🌟 الدالة الجديدة: تحديث الغرامات لجميع المستخدمين دفعة واحدة 🌟 =====
+    // هذه الدالة تضمن أن اللايبراين يرى الغرامات حتى لو المستخدم لم يدخل بعد
+    public void checkAndApplyFinesForAllUsers(BookService bookService) {
+        boolean usersUpdated = false;
+        boolean booksUpdated = false;
 
-    double paid = Math.min(amount, user.getOutstandingFine());
-    user.setOutstandingFine(user.getOutstandingFine() - paid);
-
-    // إعادة ضبط fineIssued في الكتب إذا دُفعت الغرامة
-    if (bookService != null) {
         for (Book b : bookService.getAllBooks()) {
-            if (b.isBorrowed() && b.getBorrowedBy() != null
-                    && b.getBorrowedBy().getName().equalsIgnoreCase(user.getName())
-                    && b.isFineIssued()) {
-                b.setFineIssued(false);
+            // الشروط: مستعار + متأخر + لم يتم حساب الغرامة مسبقاً
+            if (b.isBorrowed() 
+                && b.isOverdue() 
+                && !b.isFineIssued() 
+                && b.getBorrowedBy() != null) {
+
+                // البحث عن المستخدم صاحب الكتاب في قائمة المستخدمين
+                User borrower = findUserByName(b.getBorrowedBy().getName());
+
+                if (borrower != null) {
+                    double fine = b.getFineAmount();
+                    
+                    // إضافة الغرامة للمستخدم
+                    borrower.setOutstandingFine(borrower.getOutstandingFine() + fine);
+                    
+                    // وضع علامة أن الغرامة حُسبت حتى لا تتكرر
+                    b.setFineIssued(true);
+
+                    usersUpdated = true;
+                    booksUpdated = true;
+                    
+                    // طباعة توضيحية (اختياري، يمكن حذفها إذا أردت الهدوء)
+                    // System.out.println("💰 System updated fine for " + borrower.getName() + ": +" + fine);
+                }
             }
         }
-        bookService.saveBooksToFile();
+
+        // حفظ التغييرات في الملفات فوراً
+        if (usersUpdated) saveUsersToFile();
+        if (booksUpdated) bookService.saveBooksToFile();
     }
 
-    saveUsersToFile();
-    System.out.println("✅ Fine paid successfully. Remaining balance: " + user.getOutstandingFine());
-}
 
-public void addFine(User user, double amount) {
-    if (amount <= 0) return;
-    user.setOutstandingFine(user.getOutstandingFine() + amount);
-    saveUsersToFile();
-    System.out.println("⚠ Fine added to " + user.getName() + ": " + amount + " | Total outstanding: " + user.getOutstandingFine());
-}
-
-// ===== عمليات الاستعارة والإرجاع =====
-public boolean canBorrow(User user) {
-    return user.getOutstandingFine() <= 0;
-}
-
-public boolean canReturn(User user) {
-    return user.getOutstandingFine() <= 0;
-}
-
-public User findUserByName(String username) {
-    for (User u : users) {
-        if (u.getName().equalsIgnoreCase(username)) return u;
+    public void addFine(User user, double amount) {
+        if (amount <= 0) return;
+        user.setOutstandingFine(user.getOutstandingFine() + amount);
+        saveUsersToFile();
+        System.out.println("⚠ Fine added to " + user.getName() + ": " + amount +
+                " | Total outstanding: " + user.getOutstandingFine());
     }
-    return null;
-}
 
-public List<User> getAllUsers() { return users; }
+    public boolean canBorrow(User user) { return user.getOutstandingFine() <= 0; }
+    public boolean canReturn(User user) { return user.getOutstandingFine() <= 0; }
 
-public void saveUsersToFile() {
-    try (PrintWriter pw = new PrintWriter(new FileWriter(FILE_PATH))) {
+    public User findUserByName(String username) {
         for (User u : users) {
-            pw.println(u.getName() + "," + u.getPassword() + "," + u.getRole() + "," + u.getOutstandingFine());
+            if (u.getName().equalsIgnoreCase(username)) return u;
         }
-    } catch (IOException e) {
-        System.out.println("❌ Error saving users file: " + e.getMessage());
+        return null;
     }
-}
 
+    public List<User> getAllUsers() { return users; }
+
+    public void saveUsersToFile() {
+        try (PrintWriter pw = new PrintWriter(new FileWriter(FILE_PATH))) {
+            for (User u : users) {
+                pw.println(u.getName() + "," + u.getPassword() + "," + u.getRole() + "," + u.getOutstandingFine());
+            }
+        } catch (IOException e) {
+            System.out.println("❌ Error saving users file: " + e.getMessage());
+        }
+    }
 }

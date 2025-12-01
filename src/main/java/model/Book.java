@@ -11,10 +11,10 @@ public class Book {
 
     private boolean isBorrowed;
     private LocalDate dueDate;
-    private User borrowedBy; // المستخدم الذي استعار الكتاب
-    private boolean fineIssued; // لتجنب مضاعفة الغرامة
+    private User borrowedBy;
+    private boolean fineIssued;
 
-    private static final double DAILY_FINE = 1.0; // قيمة الغرامة اليومية لكل كتاب متأخر
+    private static final double DAILY_FINE = 1.0;
 
     public Book(String title, String author, String isbn) {
         this.title = title;
@@ -49,7 +49,7 @@ public class Book {
         this.isBorrowed = true;
         this.dueDate = LocalDate.now().plusDays(28);
         this.borrowedBy = user;
-        this.fineIssued = false; // عند استعارة جديدة، الغرامة لم تصدر بعد
+        this.fineIssued = false;
     }
 
     // 🔹 إرجاع الكتاب
@@ -57,7 +57,7 @@ public class Book {
         this.isBorrowed = false;
         this.dueDate = null;
         this.borrowedBy = null;
-        this.fineIssued = false; // عند الإرجاع، يتم تصفير العلم
+        this.fineIssued = false;
     }
 
     // 🔹 هل الكتاب متأخر؟
@@ -65,14 +65,13 @@ public class Book {
         return isBorrowed && dueDate != null && dueDate.isBefore(LocalDate.now());
     }
 
-    // 🔹 حساب قيمة الغرامة للكتاب
+    // 🔹 حساب الغرامة
     public double getFineAmount() {
         if (!isOverdue()) return 0;
         long daysOverdue = ChronoUnit.DAYS.between(dueDate, LocalDate.now());
         return daysOverdue * DAILY_FINE;
     }
 
-    // 🔹 تمثيل الكتاب للنصوص (للطباعة)
     @Override
     public String toString() {
         return "\nBook {" +
@@ -86,38 +85,38 @@ public class Book {
                 "\n}";
     }
 
-    // 🔹 تحويل الكتاب لسطر قابل للحفظ في الملف
+    // 🔹 تحويل إلى سطر للحفظ
     public String toFileString() {
         return title + ";" +
-               author + ";" +
-               isbn + ";" +
-               isBorrowed + ";" +
-               (dueDate != null ? dueDate.toString() : "null") + ";" +
-               (borrowedBy != null ? borrowedBy.getName() : "null") + ";" +
-               fineIssued;
+                author + ";" +
+                isbn + ";" +
+                isBorrowed + ";" +
+                (dueDate != null ? dueDate : "null") + ";" +
+                (borrowedBy != null ? borrowedBy.getName() : "null") + ";" +
+                fineIssued;
     }
 
-    // 🔹 إنشاء كتاب من سطر في الملف
+    // 🔹 استعادة كتاب من السطر
     public static Book fromFileString(String line) {
+        if (line == null || line.isBlank()) return null;
+
         String[] parts = line.split(";", -1);
+
+        if (parts.length < 3) return null;
+
         Book book = new Book(parts[0], parts[1], parts[2]);
 
-        boolean borrowed = Boolean.parseBoolean(parts[3]);
-        book.setBorrowed(borrowed);
+        if (parts.length > 3)
+            book.setBorrowed(Boolean.parseBoolean(parts[3]));
 
-        if (!parts[4].equals("null") && !parts[4].isBlank()) {
+        if (parts.length > 4 && !parts[4].equals("null"))
             book.setDueDate(LocalDate.parse(parts[4]));
-        }
 
-        if (!parts[5].equals("null") && !parts[5].isBlank()) {
-            User u = new User(parts[5], "", "User");
-            book.setBorrowedBy(u);
-        }
+        if (parts.length > 5 && !parts[5].equals("null"))
+            book.setBorrowedBy(new User(parts[5], "", "User"));
 
-        if (parts.length > 6) {
-            boolean fineIssued = Boolean.parseBoolean(parts[6]);
-            book.setFineIssued(fineIssued);
-        }
+        if (parts.length > 6)
+            book.setFineIssued(Boolean.parseBoolean(parts[6]));
 
         return book;
     }
