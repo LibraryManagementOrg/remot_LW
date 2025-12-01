@@ -5,244 +5,232 @@ import java.util.Scanner;
 
 public class mymain {
 
-    static Scanner scanner = new Scanner(System.in);
+static Scanner scanner = new Scanner(System.in);
 
-    // ===== Shared Services =====
-    static AdminService adminService = new AdminService();
-    static UserService userService = new UserService();
-    static BookService bookService = new BookService(adminService, userService); // تم تعديل الكونستركتور
-    static LoginService loginService = new LoginService();
+// ===== Shared Services =====
+static AdminService adminService = new AdminService();
+static UserService userService = new UserService();
+static BookService bookService = new BookService(adminService, userService);
 
-    public static void main(String[] args) {
+public static void main(String[] args) {
 
+    while (true) {
+        User loggedInUser = null;
+
+        // ===== LOGIN LOOP =====
         while (true) {
-            User loggedInUser = null;
+            System.out.println("Enter Username:");
+            String username = scanner.nextLine();
 
-            // ===== LOGIN LOOP =====
-            while (true) {
-                System.out.println("Enter Username:");
-                String username = scanner.nextLine();
+            System.out.println("Enter Password:");
+            String password = scanner.nextLine();
 
-                System.out.println("Enter Password:");
-                String password = scanner.nextLine();
+            // ت bookService.getAllBooks()سجيل الدخول مع تحديث الغرامة داخليًا فقط
+            loggedInUser = userService.login(username, password );
 
-                loggedInUser = loginService.login(username, password);
-                if (loggedInUser != null) {
+            if (loggedInUser != null) break;
 
-                    switch (loggedInUser.getRole().toLowerCase()) {
-                        case "user":
-                            loggedInUser = userService.findUserByName(loggedInUser.getName());
-                            userService.login(loggedInUser.getName(), loggedInUser.getPassword());
-                            break;
+            System.out.println("❌ Wrong username or password! Try again.\n");
+        }
 
-                        case "admin":
-                            adminService.loginAdmin(loggedInUser);
-                            break;
+        // تحديد الدور
+        String role = loggedInUser.getRole();
 
-                        case "librarian":
-                            // Librarian session handled later
-                            break;
+        switch (role.toLowerCase()) {
+            case "admin":
+                adminService.loginAdmin(loggedInUser);
+                adminMenu();
+                break;
 
-                        default:
-                            System.out.println("❌ Unknown role! Logging out.");
-                            loggedInUser = null;
-                            continue;
-                    }
+            case "user":
+                userMenu(loggedInUser);
+                break;
 
+            case "librarian":
+                librarianMenu(loggedInUser);
+                break;
+
+            default:
+                System.out.println("❌ Unknown role! Returning to login screen.");
+        }
+
+        System.out.println("\n🔄 Returning to Login screen...\n");
+    }
+}
+
+// =================== ADMIN MENU ===================
+public static void adminMenu() {
+    while (true) {
+        System.out.println("\n===== ADMIN MENU =====");
+        System.out.println("1. Add Book");
+        System.out.println("2. Add CD");
+        System.out.println("3. Search Media (Books + CDs)");
+        System.out.println("4. Send Reminder Emails");
+        System.out.println("5. Unregister User");
+        System.out.println("6. View All Books & Overdue");
+        System.out.println("7. Logout");
+        System.out.println("======================");
+        System.out.print("Enter your choice: ");
+
+        int choice = scanner.nextInt();
+        scanner.nextLine();
+
+        switch (choice) {
+            case 1:
+                if (!adminService.isLoggedIn()) {
+                    System.out.println("⚠ Please log in as Admin first!");
                     break;
                 }
+                System.out.print("Enter Book Title: ");
+                String title = scanner.nextLine();
+                System.out.print("Enter Author: ");
+                String author = scanner.nextLine();
+                System.out.print("Enter ISBN: ");
+                String isbn = scanner.nextLine();
+                bookService.addBook(title, author, isbn);
+                break;
 
-                System.out.println("❌ Wrong username or password! Try again.\n");
-            }
+            case 2:
+                System.out.println("🎵 Add CD feature coming soon...");
+                break;
 
-            // تحديد الدور
-            String role = loggedInUser.getRole();
+            case 3:
+                System.out.print("Enter search keyword: ");
+                String keyword = scanner.nextLine();
+                bookService.searchBook(keyword);
+                break;
 
-            switch (role.toLowerCase()) {
-                case "admin":
-                    adminMenu();
-                    break;
+            case 4:
+                System.out.println("📩 Reminder sending (mock) not implemented yet.");
+                break;
 
-                case "user":
-                    userMenu(loggedInUser);
-                    break;
+            case 5:
+                System.out.println("❗ Unregister User feature coming soon...");
+                break;
 
-                case "librarian":
-                    librarianMenu(loggedInUser);
-                    break;
-            }
+            case 6:
+                System.out.println("📚 All Books:");
+                for (Book b : bookService.getAllBooks()) {
+                    String status = b.isBorrowed() ?
+                            "Borrowed by " + b.getBorrowedBy().getName() +
+                            " | Due: " + b.getDueDate() +
+                            (b.isOverdue() ? " ⚠ Overdue!" : "") +
+                            (b.isFineIssued() ? " | Fine Issued" : "")
+                            : "Available";
+                    System.out.println(b.getTitle() + " by " + b.getAuthor() +
+                            " | ISBN: " + b.getIsbn() + " | " + status);
+                }
+                break;
 
-            System.out.println("\n🔄 Returning to Login screen...\n");
+            case 7:
+                adminService.logout();
+                return;
+
+            default:
+                System.out.println("❌ Invalid option, try again.");
         }
     }
+}
 
-    // =================== ADMIN MENU ===================
-    public static void adminMenu() {
-        while (true) {
-            System.out.println("\n===== ADMIN MENU =====");
-            System.out.println("1. Add Book");
-            System.out.println("2. Add CD");
-            System.out.println("3. Search Media (Books + CDs)");
-            System.out.println("4. Send Reminder Emails");
-            System.out.println("5. Unregister User");
-            System.out.println("6. View All Books & Overdue");
-            System.out.println("7. Logout");
-            System.out.println("======================");
-            System.out.print("Enter your choice: ");
+// =================== USER MENU ===================
+public static void userMenu(User user) {
+    while (true) {
+        System.out.println("\n===== USER MENU =====");
+        System.out.println("1. Search Book");
+        System.out.println("2. Borrow Book");
+        System.out.println("3. Return Book");
+        System.out.println("4. Pay Fine");
+        System.out.println("5. Logout");
+        System.out.println("======================");
+        System.out.print("Enter choice: ");
 
-            int choice = scanner.nextInt();
-            scanner.nextLine();
+        int choice = scanner.nextInt();
+        scanner.nextLine();
 
-            switch (choice) {
-                case 1:
-                    if (!adminService.isLoggedIn()) {
-                        System.out.println("⚠ Please log in as Admin first!");
-                        break;
-                    }
+        switch (choice) {
+            case 1:
+                System.out.print("Enter search keyword: ");
+                String keyword = scanner.nextLine();
+                bookService.searchBook(keyword);
+                break;
 
-                    System.out.print("Enter Book Title: ");
-                    String title = scanner.nextLine();
-
-                    System.out.print("Enter Author: ");
-                    String author = scanner.nextLine();
-
-                    System.out.print("Enter ISBN: ");
-                    String isbn = scanner.nextLine();
-
-                    bookService.addBook(title, author, isbn);
+            case 2:
+                if (user.getOutstandingFine() > 0) {
+                    System.out.println("❌ You cannot borrow books until you pay your fines. Outstanding fine: " + user.getOutstandingFine());
                     break;
+                }
+                System.out.print("Enter ISBN of the book to borrow: ");
+                String isbn = scanner.nextLine();
+                bookService.borrowBook(user, isbn);
+                break;
 
-                case 2:
-                    System.out.println("🎵 Add CD feature coming soon...");
+            case 3:
+                if (user.getOutstandingFine() > 0) {
+                    System.out.println("❌ You cannot return books until you pay your fines. Outstanding fine: " + user.getOutstandingFine());
                     break;
+                }
+                System.out.print("Enter ISBN of the book to return: ");
+                String returnIsbn = scanner.nextLine();
+                bookService.returnBook(returnIsbn, user);
+                break;
 
-                case 3:
-                    System.out.print("Enter search keyword: ");
-                    String keyword = scanner.nextLine();
-                    bookService.searchBook(keyword);
-                    break;
+            case 4:
+                double fine = user.getOutstandingFine();
+                if (fine == 0) {
+                    System.out.println("✅ You have no fines.");
+                } else {
+                    System.out.println("Your outstanding fine: " + fine);
+                    System.out.print("Enter amount to pay: ");
+                    double amount = scanner.nextDouble();
+                    scanner.nextLine();
+                    userService.payFine(user, amount, bookService);
+                }
+                break;
 
-                case 4:
-                    System.out.println("📩 Reminder sending (mock) not implemented yet.");
-                    break;
+            case 5:
+                userService.logout();
+                return;
 
-                case 5:
-                    System.out.println("❗ Unregister User feature coming soon...");
-                    break;
-
-                case 6:
-                    System.out.println("📚 All Books:");
-                    for (Book b : bookService.getAllBooks()) {
-                        String status = b.isBorrowed() ?
-                                "Borrowed | Due: " + b.getDueDate() + (b.isOverdue() ? " ⚠ Overdue!" : "")
-                                : "Available";
-                        System.out.println(b.getTitle() + " by " + b.getAuthor() + " | ISBN: " + b.getIsbn() + " | " + status);
-                    }
-                    break;
-
-                case 7:
-                    adminService.logout();
-                    return;
-
-                default:
-                    System.out.println("❌ Invalid option, try again.");
-            }
+            default:
+                System.out.println("❌ Invalid choice.");
         }
     }
+}
 
-    // =================== USER MENU ===================
-    public static void userMenu(User user) {
-        while (true) {
-            System.out.println("\n===== USER MENU =====");
-            System.out.println("1. Search Book");
-            System.out.println("2. Borrow Book");
-            System.out.println("3. Return Book");
-            System.out.println("4. Pay Fine");
-            System.out.println("5. Logout");
-            System.out.println("======================");
-            System.out.print("Enter choice: ");
+// =================== LIBRARIAN MENU ===================
+public static void librarianMenu(User librarian) {
+    LibrarianService librarianService = new LibrarianService();
+    librarianService.loginLibrarian(librarian);
 
-            int choice = scanner.nextInt();
-            scanner.nextLine();
+    while (true) {
+        System.out.println("\n===== LIBRARIAN MENU =====");
+        System.out.println("1. Show Overdue Books");
+        System.out.println("2. Issue Fines");
+        System.out.println("3. Logout");
+        System.out.println("===========================");
+        System.out.print("Enter choice: ");
 
-            switch (choice) {
-                case 1:
-                    System.out.print("Enter search keyword: ");
-                    String keyword = scanner.nextLine();
-                    bookService.searchBook(keyword);
-                    break;
+        int choice = scanner.nextInt();
+        scanner.nextLine();
 
-                case 2:
-                    if (!user.canBorrow()) {
-                        System.out.println("❌ You cannot borrow books until you pay your fines. Outstanding fine: " + user.getOutstandingFine());
-                        break;
-                    }
-                    System.out.print("Enter ISBN of the book to borrow: ");
-                    String isbn = scanner.nextLine();
-                    bookService.borrowBook(user, isbn);
-                    break;
+        switch (choice) {
+            case 1:
+                librarianService.showOverdueBooks(bookService.getAllBooks());
+                break;
 
-                case 3:
-                    System.out.print("Enter ISBN of the book to return: ");
-                    String returnIsbn = scanner.nextLine();
-                    bookService.returnBook(returnIsbn, user);
-                    break;
+            case 2:
+                librarianService.issueFines(bookService.getAllBooks(), userService);
+                break;
 
-                case 4:
-                    double fine = user.getOutstandingFine();
-                    if (fine == 0) {
-                        System.out.println("✅ You have no fines.");
-                    } else {
-                        System.out.println("Your outstanding fine: " + fine);
-                        System.out.print("Enter amount to pay: ");
-                        double amount = scanner.nextDouble();
-                        scanner.nextLine();
-                        userService.payFine(user, amount);
-                    }
-                    break;
+            case 3:
+                librarianService.logout();
+                return;
 
-                case 5:
-                    userService.logout();
-                    return;
-
-                default:
-                    System.out.println("❌ Invalid choice.");
-            }
+            default:
+                System.out.println("❌ Invalid choice.");
         }
     }
+}
 
-    // =================== LIBRARIAN MENU ===================
-    public static void librarianMenu(User librarian) {
-        LibrarianService librarianService = new LibrarianService();
-        librarianService.loginLibrarian(librarian);
 
-        while (true) {
-            System.out.println("\n===== LIBRARIAN MENU =====");
-            System.out.println("1. Show Overdue Books");
-            System.out.println("2. Issue Fines");
-            System.out.println("3. Logout");
-            System.out.println("===========================");
-            System.out.print("Enter choice: ");
-
-            int choice = scanner.nextInt();
-            scanner.nextLine();
-
-            switch (choice) {
-                case 1:
-                    librarianService.showOverdueBooks(bookService.getAllBooks());
-                    break;
-
-                case 2:
-                    librarianService.issueFines(bookService.getAllBooks(), userService);
-                    break;
-
-                case 3:
-                    librarianService.logout();
-                    return;
-
-                default:
-                    System.out.println("❌ Invalid choice.");
-            }
-        }
-    }
 }

@@ -1,6 +1,7 @@
 package model;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 public class Book {
 
@@ -11,7 +12,9 @@ public class Book {
     private boolean isBorrowed;
     private LocalDate dueDate;
     private User borrowedBy; // المستخدم الذي استعار الكتاب
-    private boolean fineIssued; // ⚠ جديد: لتجنب مضاعفة الغرامة
+    private boolean fineIssued; // لتجنب مضاعفة الغرامة
+
+    private static final double DAILY_FINE = 1.0; // قيمة الغرامة اليومية لكل كتاب متأخر
 
     public Book(String title, String author, String isbn) {
         this.title = title;
@@ -38,9 +41,7 @@ public class Book {
     public void setBorrowedBy(User user) { this.borrowedBy = user; }
     public void setFineIssued(boolean fineIssued) { this.fineIssued = fineIssued; }
 
-    // ====================================================
-    //              🔹 استعارة الكتاب
-    // ====================================================
+    // 🔹 استعارة الكتاب
     public void borrow(User user) {
         if (isBorrowed) {
             throw new IllegalStateException("Book is already borrowed!");
@@ -51,9 +52,7 @@ public class Book {
         this.fineIssued = false; // عند استعارة جديدة، الغرامة لم تصدر بعد
     }
 
-    // ====================================================
-    //              🔹 إرجاع الكتاب
-    // ====================================================
+    // 🔹 إرجاع الكتاب
     public void returnBook() {
         this.isBorrowed = false;
         this.dueDate = null;
@@ -61,16 +60,19 @@ public class Book {
         this.fineIssued = false; // عند الإرجاع، يتم تصفير العلم
     }
 
-    // ====================================================
-    //              🔹 هل الكتاب متأخر؟
-    // ====================================================
+    // 🔹 هل الكتاب متأخر؟
     public boolean isOverdue() {
         return isBorrowed && dueDate != null && dueDate.isBefore(LocalDate.now());
     }
 
-    // ====================================================
-    //              🔹 تمثيل الكتاب للنصوص (للطباعة)
-    // ====================================================
+    // 🔹 حساب قيمة الغرامة للكتاب
+    public double getFineAmount() {
+        if (!isOverdue()) return 0;
+        long daysOverdue = ChronoUnit.DAYS.between(dueDate, LocalDate.now());
+        return daysOverdue * DAILY_FINE;
+    }
+
+    // 🔹 تمثيل الكتاب للنصوص (للطباعة)
     @Override
     public String toString() {
         return "\nBook {" +
@@ -84,9 +86,7 @@ public class Book {
                 "\n}";
     }
 
-    // ====================================================
-    //              🔹 تحويل الكتاب لسطر قابل للحفظ في الملف
-    // ====================================================
+    // 🔹 تحويل الكتاب لسطر قابل للحفظ في الملف
     public String toFileString() {
         return title + ";" +
                author + ";" +
@@ -94,12 +94,10 @@ public class Book {
                isBorrowed + ";" +
                (dueDate != null ? dueDate.toString() : "null") + ";" +
                (borrowedBy != null ? borrowedBy.getName() : "null") + ";" +
-               fineIssued; // ⚠ حفظ العلم مع الكتاب
+               fineIssued;
     }
 
-    // ====================================================
-    //              🔹 إنشاء كتاب من سطر في الملف
-    // ====================================================
+    // 🔹 إنشاء كتاب من سطر في الملف
     public static Book fromFileString(String line) {
         String[] parts = line.split(";", -1);
         Book book = new Book(parts[0], parts[1], parts[2]);
