@@ -1,57 +1,64 @@
 package service;
 
-import model.User;
-
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+
+import model.User;
 
 public class UserService {
     private List<User> users;
     private User loggedInUser;
+    private final String FILE_PATH = "src/main/resources/users.txt";
 
     public UserService() {
         users = new ArrayList<>();
-        loadUsersFromFile("src/main/resources/users.txt"); // قراءة كل المستخدمين من الملف
+        loadUsersFromFile();
     }
 
-    private void loadUsersFromFile(String filePath) {
-        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+    private void loadUsersFromFile() {
+        users.clear(); // تنظيف القائمة قبل التحميل
+        try (BufferedReader br = new BufferedReader(new FileReader(FILE_PATH))) {
             String line;
             while ((line = br.readLine()) != null) {
-                String[] parts = line.split(",");
-                if (parts.length == 3) {
-                    String username = parts[0].trim();
-                    String password = parts[1].trim();
-                    String role = parts[2].trim();
-                    users.add(new User(username, password, role));
+                User u = User.fromFileString(line);
+                if (u != null) {
+                    users.add(u);
                 }
             }
         } catch (IOException e) {
-            System.out.println("⚠ Error reading users file: " + e.getMessage());
+            // الملف قد يكون غير موجود عند أول تشغيل
         }
     }
 
-    // تسجيل الدخول وإرجاع كائن المستخدم مهما كان دوره
+    // حفظ مستخدم جديد في الملف والقائمة
+    public void addUser(User newUser) {
+        users.add(newUser);
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(FILE_PATH, true))) {
+            bw.write(newUser.toFileString());
+            bw.newLine();
+        } catch (IOException e) {
+            System.out.println("❌ Error saving user to file!");
+        }
+    }
+
     public User login(String username, String password) {
+        // تحديث القائمة من الملف قبل اللوجين لضمان وجود المستخدمين الجدد
+        loadUsersFromFile(); 
+        
         for (User user : users) {
             if (user.getName().equals(username) && user.getPassword().equals(password)) {
                 loggedInUser = user;
-                System.out.println("✅ " + username + " logged in successfully as " + user.getRole() + ".");
+                System.out.println("✅ Logged in as: " + user.getName());
                 return user;
             }
         }
-        System.out.println("❌ Invalid username or password.");
         return null;
     }
 
     public void logout() {
-        if (loggedInUser != null) {
-            System.out.println("🔒 " + loggedInUser.getName() + " logged out successfully.");
-            loggedInUser = null;
-        }
+        loggedInUser = null;
+        System.out.println("🔒 Logged out.");
     }
 
     public boolean isLoggedIn() {
@@ -62,39 +69,33 @@ public class UserService {
         return loggedInUser;
     }
 
-    // ===== إدارة الغرامات =====
-
-    // دفع مبلغ من الغرامة (يمكن للمستخدم فقط)
-    public void payFine(User user, double amount) {
-        if (loggedInUser == null || !loggedInUser.equals(user)) {
-            System.out.println("❌ Access denied! User must be logged in to pay fine.");
-            return;
-        }
-
-        double remaining = user.getOutstandingFine() - amount;
-        user.setOutstandingFine(Math.max(0, remaining));
-        System.out.println("✅ Fine paid successfully. Remaining balance: " + user.getOutstandingFine());
-    }
-
-    // إضافة غرامة لأي مستخدم (يمكن أن يستخدمها Librarian عند التأخير)
-    public void addFine(User user, double amount) {
-        user.setOutstandingFine(user.getOutstandingFine() + amount);
-        System.out.println("⚠ Fine added to " + user.getName() + ": " + amount + " | Total outstanding: " + user.getOutstandingFine());
-    }
-
-    // البحث عن مستخدم حسب الاسم
-    public User findUserByName(String username) {
+    public User findUserByName(String name) {
+        loadUsersFromFile(); // تحديث
         for (User u : users) {
-            if (u.getName().equalsIgnoreCase(username)) {
-                return u;
-            }
+            if (u.getName().equalsIgnoreCase(name)) return u;
         }
         return null;
     }
-    
 
-    // جلب كل المستخدمين (مفيد للعرض والإدارة)
-    public List<User> getAllUsers() {
-        return users;
+    // دفع الغرامة وتحديث الملف
+    public void payFine(User user, double amount) {
+        if (amount <= 0) return;
+        
+        double newFine = Math.max(0, user.getOutstandingFine() - amount);
+        user.setOutstandingFine(newFine);
+        updateUserFile(); // تحديث الملف لحفظ الغرامة الجديدة
+        System.out.println("✅ Payment successful. Remaining fine: " + newFine);
+    }
+    
+    // إعادة كتابة الملف بالكامل (لتحديث الغرامات مثلاً)
+    private void updateUserFile() {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(FILE_PATH))) {
+            for (User u : users) {
+                bw.write(u.toFileString());
+                bw.newLine();
+            }
+        } catch (IOException e) {
+            System.out.println("❌ Error updating users file!");
+        }
     }
 }

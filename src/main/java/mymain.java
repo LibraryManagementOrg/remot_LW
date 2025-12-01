@@ -10,20 +10,69 @@ public class mymain {
     // ===== Shared Services =====
     static AdminService adminService = new AdminService();
     static UserService userService = new UserService();
-    static BookService bookService = new BookService(adminService, userService); // تم تعديل الكونستركتور
+    static BookService bookService = new BookService(adminService, userService);
     static LoginService loginService = new LoginService();
+
+    // ✅ جديد: تعريف خدمات التنبيه والإيميل
+    static NotificationObserver emailService = new RealEmailService(); // أو RealEmailService لو استخدمتي الحقيقي
+    static ReminderService reminderService =  new ReminderService(emailService, userService);
 
     public static void main(String[] args) {
 
         while (true) {
             User loggedInUser = null;
 
+            // ===== START SCREEN (Login or Register) =====
+            System.out.println("\n==================================");
+            System.out.println("    LIBRARY MANAGEMENT SYSTEM     ");
+            System.out.println("==================================");
+            System.out.println("1. Login");
+            System.out.println("2. Create New Account (Register)");
+            System.out.println("3. Exit");
+            System.out.print("Choose an option: ");
+
+            int startChoice;
+            try {
+                startChoice = Integer.parseInt(scanner.nextLine());
+            } catch (NumberFormatException e) {
+                continue;
+            }
+
+            // --- خيار إنشاء حساب جديد ---
+            if (startChoice == 2) {
+                System.out.println("\n=== Create New Account ===");
+                System.out.print("Enter Name: ");
+                String name = scanner.nextLine();
+
+                // ✅ جديد: طلب الإيميل
+                System.out.print("Enter Email: ");
+                String email = scanner.nextLine();
+
+                System.out.print("Enter Password: ");
+                String password = scanner.nextLine();
+
+                // إنشاء وحفظ المستخدم
+                User newUser = new User(name, email, password, "User");
+                userService.addUser(newUser);
+                System.out.println("✅ Account created successfully! Please login.");
+                continue; // العودة للقائمة الرئيسية لتسجيل الدخول
+            } 
+            else if (startChoice == 3) {
+                System.out.println("Goodbye!");
+                System.exit(0);
+            }
+            else if (startChoice != 1) {
+                System.out.println("❌ Invalid option.");
+                continue;
+            }
+
             // ===== LOGIN LOOP =====
             while (true) {
-                System.out.println("Enter Username:");
+                System.out.println("\n--- LOGIN ---");
+                System.out.print("Enter Username: ");
                 String username = scanner.nextLine();
 
-                System.out.println("Enter Password:");
+                System.out.print("Enter Password: ");
                 String password = scanner.nextLine();
 
                 loggedInUser = loginService.login(username, password);
@@ -31,6 +80,7 @@ public class mymain {
 
                     switch (loggedInUser.getRole().toLowerCase()) {
                         case "user":
+                            // تحديث بيانات اليوزر من القائمة للتأكد من وجود الإيميل والكتب
                             loggedInUser = userService.findUserByName(loggedInUser.getName());
                             userService.login(loggedInUser.getName(), loggedInUser.getPassword());
                             break;
@@ -48,14 +98,12 @@ public class mymain {
                             loggedInUser = null;
                             continue;
                     }
-
-                    break;
+                    break; // كسر حلقة اللوجين والدخول للقوائم
                 }
-
-                System.out.println("❌ Wrong username or password! Try again.\n");
+                System.out.println("❌ Wrong username or password! Try again.");
             }
 
-            // تحديد الدور
+            // تحديد القائمة حسب الدور
             String role = loggedInUser.getRole();
 
             switch (role.toLowerCase()) {
@@ -72,7 +120,7 @@ public class mymain {
                     break;
             }
 
-            System.out.println("\n🔄 Returning to Login screen...\n");
+            System.out.println("\n🔄 Returning to Main Screen...\n");
         }
     }
 
@@ -83,15 +131,20 @@ public class mymain {
             System.out.println("1. Add Book");
             System.out.println("2. Add CD");
             System.out.println("3. Search Media (Books + CDs)");
-            System.out.println("4. Send Reminder Emails");
+            System.out.println("4. Send Reminder Emails (Observer Pattern)"); // ✅
             System.out.println("5. Unregister User");
             System.out.println("6. View All Books & Overdue");
             System.out.println("7. Logout");
             System.out.println("======================");
             System.out.print("Enter your choice: ");
 
-            int choice = scanner.nextInt();
-            scanner.nextLine();
+            int choice;
+            try {
+                choice = Integer.parseInt(scanner.nextLine());
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input.");
+                continue;
+            }
 
             switch (choice) {
                 case 1:
@@ -99,16 +152,12 @@ public class mymain {
                         System.out.println("⚠ Please log in as Admin first!");
                         break;
                     }
-
                     System.out.print("Enter Book Title: ");
                     String title = scanner.nextLine();
-
                     System.out.print("Enter Author: ");
                     String author = scanner.nextLine();
-
                     System.out.print("Enter ISBN: ");
                     String isbn = scanner.nextLine();
-
                     bookService.addBook(title, author, isbn);
                     break;
 
@@ -123,7 +172,10 @@ public class mymain {
                     break;
 
                 case 4:
-                    System.out.println("📩 Reminder sending (mock) not implemented yet.");
+                    // ✅ تفعيل الكود الخاص بالسبرنت 3
+                    System.out.println("📩 Sending overdue reminders...");
+                    // نمرر قائمة الكتب كلها للخدمة وهي تفحص المتأخر وترسل إيميلات
+                    reminderService.sendOverdueReminders(bookService.getAllBooks());
                     break;
 
                 case 5:
@@ -153,7 +205,7 @@ public class mymain {
     // =================== USER MENU ===================
     public static void userMenu(User user) {
         while (true) {
-            System.out.println("\n===== USER MENU =====");
+            System.out.println("\n===== USER MENU (" + user.getName() + ") =====");
             System.out.println("1. Search Book");
             System.out.println("2. Borrow Book");
             System.out.println("3. Return Book");
@@ -162,8 +214,13 @@ public class mymain {
             System.out.println("======================");
             System.out.print("Enter choice: ");
 
-            int choice = scanner.nextInt();
-            scanner.nextLine();
+            int choice;
+            try {
+                choice = Integer.parseInt(scanner.nextLine());
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input.");
+                continue;
+            }
 
             switch (choice) {
                 case 1:
@@ -195,8 +252,13 @@ public class mymain {
                     } else {
                         System.out.println("Your outstanding fine: " + fine);
                         System.out.print("Enter amount to pay: ");
-                        double amount = scanner.nextDouble();
-                        scanner.nextLine();
+                        double amount;
+                        try {
+                            amount = Double.parseDouble(scanner.nextLine());
+                        } catch (NumberFormatException e) {
+                            System.out.println("Invalid amount.");
+                            break;
+                        }
                         userService.payFine(user, amount);
                     }
                     break;
@@ -224,8 +286,13 @@ public class mymain {
             System.out.println("===========================");
             System.out.print("Enter choice: ");
 
-            int choice = scanner.nextInt();
-            scanner.nextLine();
+            int choice;
+            try {
+                choice = Integer.parseInt(scanner.nextLine());
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input.");
+                continue;
+            }
 
             switch (choice) {
                 case 1:

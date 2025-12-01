@@ -1,4 +1,3 @@
-Layal,1234,Admin
-ahmad,1234,User
-sam,1234,Librarian
-waad,4444,User
+waad;s12217555@stu.najah.edu;1234;Admin;0.0
+wad1;waaddwikat1234@gmail.com;123;User;0.0
+layal;s12218557@stu.najah.edu;123;User;0.0
