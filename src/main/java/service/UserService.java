@@ -1,7 +1,7 @@
 package service;
 
 import model.User;
-import model.media; // تأكد من استيراد Media
+import model.media; // تأكد من أن اسم الكلاس عندك يبدأ بحرف صغير كما أرسلته (media)
 import java.io.*;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -19,24 +19,41 @@ public class UserService {
         loadUsersFromFile(FILE_PATH);
     }
 
-    // تحميل المستخدمين
+    // =============================================================
+    // 📂 تحميل المستخدمين (تعديل لقراءة الإيميل)
+    // =============================================================
     private void loadUsersFromFile(String filePath) {
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
             while ((line = br.readLine()) != null) {
                 if (line.trim().isEmpty()) continue;
+                
                 String[] parts = line.split(",");
+                
+                // التأكد من وجود البيانات الأساسية (الاسم، الباسورد، الرول)
                 if (parts.length >= 3) {
                     String username = parts[0].trim();
                     String password = parts[1].trim();
                     String role = parts[2].trim();
+                    
                     double fine = 0.0;
-                    if (parts.length > 3) {
-                        try { fine = Double.parseDouble(parts[3]); }
-                        catch (NumberFormatException e) { fine = 0.0; }
+                    // قراءة الغرامة (الخانة 4)
+                    if (parts.length >= 4) {
+                        try { 
+                            fine = Double.parseDouble(parts[3].trim()); 
+                        } catch (NumberFormatException e) { 
+                            fine = 0.0; 
+                        }
                     }
-                    User user = new User(username, password, role);
-                    user.setOutstandingFine(fine);
+
+                    // ✅ قراءة الإيميل (الخانة 5)
+                    String email = "";
+                    if (parts.length >= 5) {
+                        email = parts[4].trim();
+                    }
+
+                    // استخدام الكونستركتور الجديد الذي يحتوي على الإيميل
+                    User user = new User(username, password, role, fine, email);
                     users.add(user);
                 }
             }
@@ -73,7 +90,7 @@ public class UserService {
     public User getLoggedInUser() { return loggedInUser; }
 
     // =============================================================
-    // 💰 دفع الغرامة + تقرير تفصيلي (US5.3 Mixed Media Handling)
+    // 💰 دفع الغرامة + تقرير تفصيلي
     // =============================================================
     public void payFine(User user, double amount, BookService bookService) {
         if (loggedInUser == null || !loggedInUser.equals(user)) {
@@ -81,7 +98,7 @@ public class UserService {
             return;
         }
 
-        // 1️⃣ عرض تقرير مفصل للغرامات (كتب vs سيديات)
+        // 1️⃣ عرض تقرير مفصل للغرامات
         System.out.println("\n📊 --- YOUR FINE BREAKDOWN ---");
         boolean hasOverdueItems = false;
 
@@ -94,9 +111,8 @@ public class UserService {
 
                     hasOverdueItems = true;
                     long days = ChronoUnit.DAYS.between(m.getDueDate(), LocalDate.now());
-                    double itemFine = m.getFineAmount(); // يستخدم الاستراتيجية (10 للكتاب، 20 للسي دي)
+                    double itemFine = m.getFineAmount(); 
                     
-                    // تحديد النوع للطباعة (Book أو CD)
                     String type = m.getClass().getSimpleName(); 
 
                     System.out.println(String.format("🔴 [%s] %s | Overdue: %d days | Fine: %.1f NIS", 
@@ -148,7 +164,7 @@ public class UserService {
             if (itemsReturned) bookService.saveBooksToFile();
         }
 
-        saveUsersToFile();
+        saveUsersToFile(); // حفظ التغييرات (بما فيها الإيميل)
         System.out.println("✅ Payment successful. Remaining balance: " + user.getOutstandingFine());
     }
 
@@ -205,10 +221,18 @@ public class UserService {
 
     public List<User> getAllUsers() { return users; }
 
+    // =============================================================
+    // 💾 حفظ المستخدمين (تعديل لحفظ الإيميل)
+    // =============================================================
     public void saveUsersToFile() {
         try (PrintWriter pw = new PrintWriter(new FileWriter(FILE_PATH))) {
             for (User u : users) {
-                pw.println(u.getName() + "," + u.getPassword() + "," + u.getRole() + "," + u.getOutstandingFine());
+                // ✅ إضافة الإيميل في نهاية السطر
+                pw.println(u.getName() + "," + 
+                           u.getPassword() + "," + 
+                           u.getRole() + "," + 
+                           u.getOutstandingFine() + "," + 
+                           u.getEmail());
             }
         } catch (IOException e) {
             System.out.println("❌ Error saving users file: " + e.getMessage());

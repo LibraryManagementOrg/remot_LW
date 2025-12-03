@@ -11,7 +11,8 @@ public class mymain {
     static AdminService adminService = new AdminService();
     static UserService userService = new UserService();
     
-    // نمرر الخدمات لبعضها البعض حسب الحاجة
+    // نمرر الخدمات لبعضها البعض حسب الحاجة (تأكد أن كونستركتور BookService عندك يستقبلهم)
+    // إذا كان BookService عندك لا يستقبل باراميترات، اجعلها: new BookService();
     static BookService bookService = new BookService(adminService, userService);
 
     public static void main(String[] args) {
@@ -22,13 +23,13 @@ public class mymain {
             // ===== LOGIN LOOP =====
             while (true) {
                 System.out.println("\n=== LIBRARY SYSTEM LOGIN ===");
-                System.out.println("Enter Username:");
+                System.out.print("Enter Username: ");
                 String username = scanner.nextLine();
 
-                System.out.println("Enter Password:");
+                System.out.print("Enter Password: ");
                 String password = scanner.nextLine();
 
-                // تمرير bookService يسمح بتحديث الغرامات بصمت عند دخول المستخدم
+                // محاولة تسجيل الدخول
                 loggedInUser = userService.login(username, password, bookService);
 
                 if (loggedInUser != null) break;
@@ -64,9 +65,9 @@ public class mymain {
         while (true) {
             System.out.println("\n===== ADMIN MENU =====");
             System.out.println("1. Add Book");
-            System.out.println("2. Add CD"); // ✅ مفعل الآن
+            System.out.println("2. Add CD"); 
             System.out.println("3. Search Media");
-            System.out.println("4. Send Reminder Emails");
+            System.out.println("4. Send Reminder Emails"); // ✅ تفعيل الخيار
             System.out.println("5. Unregister User");
             System.out.println("6. View All Media (Books & CDs)");
             System.out.println("7. Logout");
@@ -99,7 +100,6 @@ public class mymain {
                     break;
 
                 case 2:
-                    // ✅ US5.1: إضافة CD
                     if (!adminService.isLoggedIn()) {
                         System.out.println("⚠ Please log in as Admin first!");
                         break;
@@ -120,27 +120,23 @@ public class mymain {
                     break;
 
                 case 4:
-                    // ✅ تفعيل إرسال الإيميلات
-                    // ملاحظة: تأكد أن AdminService تم تحديثه ليقبل List<Media> كما شرحنا سابقاً
-                	//adminService.sendOverdueReminders(userService.getAllUsers(), bookService.getAllBooks());
+                    // ✅ تم التعديل: استدعاء الدالة بشكل صحيح
+                    System.out.println("📧 Initiating email process...");
+                    adminService.sendOverdueReminders(userService, bookService);
                     break;
 
                 case 5:
-                    // ✅ تفعيل حذف المستخدم
                     System.out.println("\n=== Unregister User ===");
                     System.out.print("Enter username to delete: ");
                     String userToDelete = scanner.nextLine();
                     
-                    // استدعاء الدالة من AdminService للتحقق والحذف
                     adminService.unregisterUser(userToDelete, userService, bookService);
                     break;
 
                 case 6:
-                    // ✅ تعديل العرض ليشمل Media بدلاً من Book فقط
                     System.out.println("📚 All Media Status:");
                     boolean hasItems = false;
                     
-                    // نستخدم Media لأنه الأب المشترك للكتب والسيديات
                     for (media m : bookService.getAllBooks()) { 
                         hasItems = true;
                         String status;
@@ -152,7 +148,6 @@ public class mymain {
                         } else {
                             status = "🟢 Available";
                         }
-                        // Polymorphism: m.toString() will behave differently for Book vs CD
                         System.out.println(m.toString() + " | " + status);
                     }
                     if (!hasItems) System.out.println("No items in library.");
@@ -171,7 +166,7 @@ public class mymain {
     // =================== USER MENU ===================
     public static void userMenu(User user) {
         while (true) {
-            System.out.println("\n===== USER MENU =====");
+            System.out.println("\n===== USER MENU (" + user.getName() + ") =====");
             System.out.println("1. Search Media");
             System.out.println("2. Borrow Item (Book/CD)");
             System.out.println("3. Return Item");
@@ -204,13 +199,12 @@ public class mymain {
                     }
                     System.out.print("Enter ISBN (Book) or Barcode (CD) to borrow: ");
                     String id = scanner.nextLine();
-                    bookService.borrowBook(user, id); // الدالة الآن تدعم الاثنين
+                    bookService.borrowBook(user, id); 
                     break;
 
                 case 3:
                     if (user.getOutstandingFine() > 0) {
-                        System.out.println("❌ You cannot return items until you pay your fines (Logic from previous sprint). Outstanding fine: " + user.getOutstandingFine());
-                        break;
+                        System.out.println("❌ Note: You have unpaid fines (" + user.getOutstandingFine() + "), but you can still return items to stop fine accumulation.");
                     }
                     System.out.print("Enter ISBN or Barcode to return: ");
                     String returnId = scanner.nextLine();

@@ -1,8 +1,6 @@
 package service;
 
 import java.util.List;
-
-import model.Book;
 import model.User;
 import model.media;
 
@@ -55,7 +53,7 @@ public class AdminService {
     }
 
     // =========================================================
-    // 🛑 US4.2: إلغاء تسجيل المستخدم (Unregister User) 🛑
+    // 🛑 US4.2: إلغاء تسجيل المستخدم (Unregister User)
     // =========================================================
     public void unregisterUser(String username, UserService userService, BookService bookService) {
         // 1. التحقق من صلاحية الأدمن
@@ -94,11 +92,32 @@ public class AdminService {
         }
 
         // 5. إذا تجاوز كل الشروط، قم بالحذف
-        // نستدعي الدالة التي أضفناها في UserService
         boolean deleted = userService.deleteUser(username);
         if (deleted) {
             System.out.println("✅ User [" + username + "] unregistered successfully.");
         }
+    }
+    
+    // =========================================================
+    // 📧 US3.1: إرسال تنبيهات (Observer Pattern Applied) ✅
+    // =========================================================
+    public void sendOverdueReminders(UserService userService, BookService bookService) {
+        if (!loggedIn) {
+            System.out.println("❌ Access denied! Please log in as admin.");
+            return;
+        }
+
+        System.out.println("📧 Initiating notification process...");
+
+        // 1. إنشاء الـ Observer (الذي يعرف كيف يرسل الإيميل الحقيقي)
+        // تأكدي أن RealEmailService يحتوي على إعدادات Gmail الصحيحة
+        NotificationObserver emailObserver = new RealEmailService();
+
+        // 2. إنشاء الـ Subject/Logic Service وحقن الـ Observer فيه
+        ReminderService reminderService = new ReminderService(emailObserver, userService);
+
+        // 3. تنفيذ العملية (ReminderService سيقوم بالفحص واستدعاء Observer عند الحاجة)
+        reminderService.sendOverdueReminders(bookService.getAllBooks());
     }
 
     // --- إرجاع المستخدم الحالي ---
