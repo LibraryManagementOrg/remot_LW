@@ -1,3 +1,9 @@
+<<<<<<< HEAD
 java;jon;111;true;2025-10-29;wad1;false
 java;jon;111;true;2025-12-03;wad1;false
 Data Structures;Alice;222;true;2025-12-03;layal;false
+=======
+BOOK;frfcsdf;3rf3w;2345;true;2025-11-29;ahmad;true
+CD;frfe;fw433;24242;true;2025-11-08;waad;true
+CD;rgrg;r3wr;12345;false;null;null;false
+>>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git

@@ -1,12 +1,20 @@
 package model;
 
 public class User {
+<<<<<<< HEAD
     private String name;
     private String email; 
     private String password;
     private String role;
     private double outstandingFine;
+=======
 
+private String name;
+private String password;
+private String role;
+>>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
+
+<<<<<<< HEAD
     // الكونستركتور
     public User(String name, String email, String password, String role) {
         this.name = name;
@@ -14,8 +22,45 @@ public class User {
         this.password = password;
         this.role = role;
         this.outstandingFine = 0.0;
+=======
+private double outstandingFine;  // الغرامة المتراكمة على المستخدم
+
+public User(String name, String password, String role) {
+    this.name = name;
+    this.password = password;
+    this.role = role;
+    this.outstandingFine = 0.0;  // يبدأ بدون غرامات
+}
+
+// ===== GETTERS =====
+public String getName() { return name; }
+public String getPassword() { return password; }
+public String getRole() { return role; }
+public double getOutstandingFine() { return outstandingFine; }
+
+// ===== SETTERS =====
+public void setOutstandingFine(double outstandingFine) {
+    this.outstandingFine = outstandingFine;
+}
+
+// ===== LOGIC =====
+
+// إضافة غرامة على المستخدم
+public void addFine(double amount) {
+    if (amount > 0) {
+        outstandingFine += amount;
+    }
+}
+
+// دفع غرامة (جزئي أو كامل)
+public void payFine(double amount) {
+    if (amount <= 0) {
+        System.out.println("❌ Invalid amount!");
+        return;
+>>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
     }
 
+<<<<<<< HEAD
     // Getters & Setters
     public String getName() { return name; }
     public String getEmail() { return email; }
@@ -24,7 +69,11 @@ public class User {
     public double getOutstandingFine() { return outstandingFine; }
     
     public void setOutstandingFine(double f) { this.outstandingFine = f; }
+=======
+    outstandingFine -= amount;
+>>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
 
+<<<<<<< HEAD
     // ==========================================
     // ✅✅ الدوال المنطقية (كانت ناقصة عندك) ✅✅
     // ==========================================
@@ -71,3 +120,26 @@ public class User {
         return "User: " + name + " (" + email + ")";
     }
 }
+=======
+    if (outstandingFine < 0) {
+        outstandingFine = 0; // لا نسمح برصيد سلبي
+    }
+}
+
+// هل يمكنه الاستعارة؟
+public boolean canBorrow() {
+    return outstandingFine == 0.0;
+}
+
+@Override
+public String toString() {
+    return "User {" +
+            "name='" + name + '\'' +
+            ", role='" + role + '\'' +
+            ", outstandingFine=" + outstandingFine +
+            '}';
+}
+
+
+}
+>>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
