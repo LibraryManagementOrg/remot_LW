@@ -4,47 +4,27 @@ import model.Book;
 import model.CD;
 import model.media;
 import model.User;
+
 import java.io.*;
-<<<<<<< HEAD
-=======
 import java.time.LocalDate;
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
 import java.util.ArrayList;
 import java.util.List;
 
 public class BookService {
-<<<<<<< HEAD
-    
-    private List<Book> books = new ArrayList<>();
-    private final String FILE_PATH = "src/main/resources/books.txt"; // مسار الملف
-=======
 
     // 🌟 تغيير القائمة لتستوعب Media (كتب + CDs)
     private List<media> items = new ArrayList<>();
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
     
     private AdminService adminService;
     private UserService userService;
-<<<<<<< HEAD
-=======
     private final String FILE_PATH = "src/main/resources/books.txt";
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
 
     public BookService(AdminService adminService, UserService userService) {
         this.adminService = adminService;
         this.userService = userService;
-<<<<<<< HEAD
-        loadBooksFromFile(); // ✅ قراءة الكتب القديمة عند التشغيل
-=======
         loadItemsFromFile();
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
     }
 
-<<<<<<< HEAD
-    // ==========================================
-    //           ADD BOOK (مع الحفظ)
-    // ==========================================
-=======
     // =============================
     //      تحميل الوسائط من الملف
     // =============================
@@ -130,14 +110,7 @@ public class BookService {
     // =============================
     //           إضافة كتاب
     // =============================
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
     public void addBook(String title, String author, String isbn) {
-<<<<<<< HEAD
-        Book newBook = new Book(title, author, isbn);
-        books.add(newBook);
-        saveBooksToFile(); // ✅ حفظ فوري في الملف
-        System.out.println("✅ Book added and saved to file successfully!");
-=======
         if (!adminService.isLoggedIn()) {
             System.out.println("❌ Access denied. Admin login required.");
             return;
@@ -151,25 +124,8 @@ public class BookService {
         items.add(new Book(title, author, isbn));
         saveBooksToFile();
         System.out.println("📗 Book added successfully!");
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
     }
 
-<<<<<<< HEAD
-    // ==========================================
-    //           BORROW & RETURN (مع الحفظ)
-    // ==========================================
-    public void borrowBook(User user, String isbn) {
-        for (Book b : books) {
-            if (b.getIsbn().equals(isbn)) {
-                if (!b.isBorrowed()) {
-                    b.borrow(user);
-                    saveBooksToFile(); // ✅ تحديث الملف (لأن الحالة تغيرت)
-                    System.out.println("✅ You borrowed: " + b.getTitle());
-                } else {
-                    System.out.println("❌ Book is already borrowed.");
-                }
-                return;
-=======
     // =============================
     //        إضافة CD (جديد)
     // =============================
@@ -201,12 +157,8 @@ public class BookService {
                 m.getId().equalsIgnoreCase(keyword)) {
 
                 results.add(m);
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
             }
         }
-<<<<<<< HEAD
-        System.out.println("❌ Book not found.");
-=======
 
         if (results.isEmpty()) {
             System.out.println("❌ No items found matching \"" + keyword + "\"");
@@ -216,24 +168,8 @@ public class BookService {
                 System.out.println(m); // سيستخدم toString الخاص بـ Book أو CD
             }
         }
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
     }
 
-<<<<<<< HEAD
-    public void returnBook(String isbn, User user) {
-        for (Book b : books) {
-            if (b.getIsbn().equals(isbn) && b.isBorrowed()) {
-                // التحقق: هل هذا المستخدم هو من استعار الكتاب؟
-                if (b.getBorrowedBy() != null && b.getBorrowedBy().getName().equals(user.getName())) {
-                    b.returnBook();
-                    saveBooksToFile(); // ✅ تحديث الملف
-                    System.out.println("✅ Book returned successfully.");
-                } else {
-                    System.out.println("❌ You cannot return a book you didn't borrow!");
-                }
-                return;
-            }
-=======
     // =============================
     //        استعارة (Polymorphic)
     // =============================
@@ -307,55 +243,17 @@ public class BookService {
     public media findMediaById(String id) {
         for (media m : items) {
             if (m.getId().equalsIgnoreCase(id)) return m;
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
         }
-        System.out.println("❌ Cannot return book (Not found or not borrowed).");
+        return null;
     }
 
-<<<<<<< HEAD
-    // ==========================================
-    //           SEARCH & GET
-    // ==========================================
-    public void searchBook(String keyword) {
-        boolean found = false;
-        for (Book b : books) {
-            if (b.getTitle().toLowerCase().contains(keyword.toLowerCase()) || 
-                b.getIsbn().equals(keyword)) {
-                System.out.println(b);
-                found = true;
-            }
-        }
-        if (!found) System.out.println("❌ No books found.");
-    }
-
-    public List<Book> getAllBooks() {
-        return books;
-=======
     // =============================
     //     عرض كل الوسائط
     // =============================
     public List<media> getAllBooks() {
         return items;
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
     }
 
-<<<<<<< HEAD
-    // ==========================================
-    //           FILE HANDLING (القراءة والكتابة)
-    // ==========================================
-    
-    private void loadBooksFromFile() {
-        books.clear();
-        try (BufferedReader br = new BufferedReader(new FileReader(FILE_PATH))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                // نستخدم دالة fromFileString الموجودة في كلاس Book
-                Book b = Book.fromFileString(line);
-                books.add(b);
-            }
-        } catch (IOException e) {
-            // الملف قد يكون فارغاً في البداية، لا مشكلة
-=======
     // =============================
     //   جعل عنصر متأخر (للتجربة)
     // =============================
@@ -366,22 +264,6 @@ public class BookService {
             System.out.println("Item " + m.getTitle() + " is now overdue.");
         } else {
             System.out.println("Item not found or not borrowed.");
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
         }
     }
-<<<<<<< HEAD
-
-    private void saveBooksToFile() {
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(FILE_PATH))) {
-            for (Book b : books) {
-                // نستخدم دالة toFileString الموجودة في كلاس Book
-                bw.write(b.toFileString());
-                bw.newLine();
-            }
-        } catch (IOException e) {
-            System.out.println("❌ Error saving books to file!");
-        }
-    }
-=======
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
 }

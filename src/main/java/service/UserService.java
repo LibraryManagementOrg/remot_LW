@@ -1,18 +1,12 @@
 package service;
 
-<<<<<<< HEAD
-import java.io.*;
-=======
 import model.User;
-import model.media; // تأكد من استيراد Media
+import model.media; // تأكد من أن اسم الكلاس عندك يبدأ بحرف صغير كما أرسلته (media)
 import java.io.*;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
 import java.util.ArrayList;
 import java.util.List;
-
-import model.User;
 
 public class UserService {
 
@@ -22,107 +16,81 @@ public class UserService {
 
     public UserService() {
         users = new ArrayList<>();
-<<<<<<< HEAD
-        loadUsersFromFile();
-=======
         loadUsersFromFile(FILE_PATH);
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
     }
 
-<<<<<<< HEAD
-    private void loadUsersFromFile() {
-        users.clear(); // تنظيف القائمة قبل التحميل
-        try (BufferedReader br = new BufferedReader(new FileReader(FILE_PATH))) {
-=======
-    // تحميل المستخدمين
+    // =============================================================
+    // 📂 تحميل المستخدمين (تعديل لقراءة الإيميل)
+    // =============================================================
     private void loadUsersFromFile(String filePath) {
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
             String line;
             while ((line = br.readLine()) != null) {
-<<<<<<< HEAD
-                User u = User.fromFileString(line);
-                if (u != null) {
-                    users.add(u);
-=======
                 if (line.trim().isEmpty()) continue;
+                
                 String[] parts = line.split(",");
+                
+                // التأكد من وجود البيانات الأساسية (الاسم، الباسورد، الرول)
                 if (parts.length >= 3) {
                     String username = parts[0].trim();
                     String password = parts[1].trim();
                     String role = parts[2].trim();
+                    
                     double fine = 0.0;
-                    if (parts.length > 3) {
-                        try { fine = Double.parseDouble(parts[3]); }
-                        catch (NumberFormatException e) { fine = 0.0; }
+                    // قراءة الغرامة (الخانة 4)
+                    if (parts.length >= 4) {
+                        try { 
+                            fine = Double.parseDouble(parts[3].trim()); 
+                        } catch (NumberFormatException e) { 
+                            fine = 0.0; 
+                        }
                     }
-                    User user = new User(username, password, role);
-                    user.setOutstandingFine(fine);
+
+                    // ✅ قراءة الإيميل (الخانة 5)
+                    String email = "";
+                    if (parts.length >= 5) {
+                        email = parts[4].trim();
+                    }
+
+                    // استخدام الكونستركتور الجديد الذي يحتوي على الإيميل
+                    User user = new User(username, password, role, fine, email);
                     users.add(user);
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
                 }
             }
         } catch (IOException e) {
-            // الملف قد يكون غير موجود عند أول تشغيل
+            System.out.println("⚠ Error reading users file: " + e.getMessage());
         }
     }
 
-<<<<<<< HEAD
-    // حفظ مستخدم جديد في الملف والقائمة
-    public void addUser(User newUser) {
-        users.add(newUser);
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(FILE_PATH, true))) {
-            bw.write(newUser.toFileString());
-            bw.newLine();
-        } catch (IOException e) {
-            System.out.println("❌ Error saving user to file!");
-        }
-    }
-
-    public User login(String username, String password) {
-        // تحديث القائمة من الملف قبل اللوجين لضمان وجود المستخدمين الجدد
-        loadUsersFromFile(); 
-        
-=======
     // تسجيل الدخول
     public User login(String username, String password, BookService bookService) {
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
         for (User user : users) {
             if (user.getName().equals(username) && user.getPassword().equals(password)) {
                 loggedInUser = user;
-<<<<<<< HEAD
-                System.out.println("✅ Logged in as: " + user.getName());
-=======
                 System.out.println("✅ " + username + " logged in successfully as " + user.getRole() + ".");
 
                 if (bookService != null) {
                     checkAndApplyFinesForAllUsers(bookService);
                 }
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
                 return user;
             }
         }
+        System.out.println("❌ Invalid username or password.");
         return null;
     }
 
     public void logout() {
-        loggedInUser = null;
-        System.out.println("🔒 Logged out.");
+        if (loggedInUser != null) {
+            System.out.println("🔒 " + loggedInUser.getName() + " logged out successfully.");
+            loggedInUser = null;
+        }
     }
 
     public boolean isLoggedIn() { return loggedInUser != null; }
     public User getLoggedInUser() { return loggedInUser; }
 
-<<<<<<< HEAD
-    public User getLoggedInUser() {
-        return loggedInUser;
-    }
-
-    public User findUserByName(String name) {
-        loadUsersFromFile(); // تحديث
-=======
     // =============================================================
-    // 💰 دفع الغرامة + تقرير تفصيلي (US5.3 Mixed Media Handling)
+    // 💰 دفع الغرامة + تقرير تفصيلي
     // =============================================================
     public void payFine(User user, double amount, BookService bookService) {
         if (loggedInUser == null || !loggedInUser.equals(user)) {
@@ -130,7 +98,7 @@ public class UserService {
             return;
         }
 
-        // 1️⃣ عرض تقرير مفصل للغرامات (كتب vs سيديات)
+        // 1️⃣ عرض تقرير مفصل للغرامات
         System.out.println("\n📊 --- YOUR FINE BREAKDOWN ---");
         boolean hasOverdueItems = false;
 
@@ -143,9 +111,8 @@ public class UserService {
 
                     hasOverdueItems = true;
                     long days = ChronoUnit.DAYS.between(m.getDueDate(), LocalDate.now());
-                    double itemFine = m.getFineAmount(); // يستخدم الاستراتيجية (10 للكتاب، 20 للسي دي)
+                    double itemFine = m.getFineAmount(); 
                     
-                    // تحديد النوع للطباعة (Book أو CD)
                     String type = m.getClass().getSimpleName(); 
 
                     System.out.println(String.format("🔴 [%s] %s | Overdue: %d days | Fine: %.1f NIS", 
@@ -197,7 +164,7 @@ public class UserService {
             if (itemsReturned) bookService.saveBooksToFile();
         }
 
-        saveUsersToFile();
+        saveUsersToFile(); // حفظ التغييرات (بما فيها الإيميل)
         System.out.println("✅ Payment successful. Remaining balance: " + user.getOutstandingFine());
     }
 
@@ -224,16 +191,11 @@ public class UserService {
 
     public boolean deleteUser(String username) {
         User userToRemove = null;
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
         for (User u : users) {
-<<<<<<< HEAD
-            if (u.getName().equalsIgnoreCase(name)) return u;
-=======
             if (u.getName().equalsIgnoreCase(username)) {
                 userToRemove = u;
                 break;
             }
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
         }
         if (userToRemove != null) {
             users.remove(userToRemove);
@@ -257,37 +219,23 @@ public class UserService {
         return null;
     }
 
-<<<<<<< HEAD
-    // دفع الغرامة وتحديث الملف
-    public void payFine(User user, double amount) {
-        if (amount <= 0) return;
-        
-        double newFine = Math.max(0, user.getOutstandingFine() - amount);
-        user.setOutstandingFine(newFine);
-        updateUserFile(); // تحديث الملف لحفظ الغرامة الجديدة
-        System.out.println("✅ Payment successful. Remaining fine: " + newFine);
-    }
-    
-    // إعادة كتابة الملف بالكامل (لتحديث الغرامات مثلاً)
-    private void updateUserFile() {
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(FILE_PATH))) {
-            for (User u : users) {
-                bw.write(u.toFileString());
-                bw.newLine();
-            }
-        } catch (IOException e) {
-            System.out.println("❌ Error updating users file!");
-=======
     public List<User> getAllUsers() { return users; }
 
+    // =============================================================
+    // 💾 حفظ المستخدمين (تعديل لحفظ الإيميل)
+    // =============================================================
     public void saveUsersToFile() {
         try (PrintWriter pw = new PrintWriter(new FileWriter(FILE_PATH))) {
             for (User u : users) {
-                pw.println(u.getName() + "," + u.getPassword() + "," + u.getRole() + "," + u.getOutstandingFine());
+                // ✅ إضافة الإيميل في نهاية السطر
+                pw.println(u.getName() + "," + 
+                           u.getPassword() + "," + 
+                           u.getRole() + "," + 
+                           u.getOutstandingFine() + "," + 
+                           u.getEmail());
             }
         } catch (IOException e) {
             System.out.println("❌ Error saving users file: " + e.getMessage());
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
         }
     }
 }

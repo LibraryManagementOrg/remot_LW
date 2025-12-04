@@ -10,119 +10,32 @@ public class mymain {
     // ===== Shared Services =====
     static AdminService adminService = new AdminService();
     static UserService userService = new UserService();
-<<<<<<< HEAD
-    static BookService bookService = new BookService(adminService, userService);
-    static LoginService loginService = new LoginService();
-=======
     
-    // نمرر الخدمات لبعضها البعض حسب الحاجة
+    // نمرر الخدمات لبعضها البعض حسب الحاجة (تأكد أن كونستركتور BookService عندك يستقبلهم)
+    // إذا كان BookService عندك لا يستقبل باراميترات، اجعلها: new BookService();
     static BookService bookService = new BookService(adminService, userService);
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
-
-    // ✅ جديد: تعريف خدمات التنبيه والإيميل
-    static NotificationObserver emailService = new RealEmailService(); // أو RealEmailService لو استخدمتي الحقيقي
-    static ReminderService reminderService =  new ReminderService(emailService, userService);
 
     public static void main(String[] args) {
 
         while (true) {
             User loggedInUser = null;
 
-            // ===== START SCREEN (Login or Register) =====
-            System.out.println("\n==================================");
-            System.out.println("    LIBRARY MANAGEMENT SYSTEM     ");
-            System.out.println("==================================");
-            System.out.println("1. Login");
-            System.out.println("2. Create New Account (Register)");
-            System.out.println("3. Exit");
-            System.out.print("Choose an option: ");
-
-            int startChoice;
-            try {
-                startChoice = Integer.parseInt(scanner.nextLine());
-            } catch (NumberFormatException e) {
-                continue;
-            }
-
-            // --- خيار إنشاء حساب جديد ---
-            if (startChoice == 2) {
-                System.out.println("\n=== Create New Account ===");
-                System.out.print("Enter Name: ");
-                String name = scanner.nextLine();
-
-                // ✅ جديد: طلب الإيميل
-                System.out.print("Enter Email: ");
-                String email = scanner.nextLine();
-
-                System.out.print("Enter Password: ");
-                String password = scanner.nextLine();
-
-                // إنشاء وحفظ المستخدم
-                User newUser = new User(name, email, password, "User");
-                userService.addUser(newUser);
-                System.out.println("✅ Account created successfully! Please login.");
-                continue; // العودة للقائمة الرئيسية لتسجيل الدخول
-            } 
-            else if (startChoice == 3) {
-                System.out.println("Goodbye!");
-                System.exit(0);
-            }
-            else if (startChoice != 1) {
-                System.out.println("❌ Invalid option.");
-                continue;
-            }
-
             // ===== LOGIN LOOP =====
             while (true) {
-<<<<<<< HEAD
-                System.out.println("\n--- LOGIN ---");
-                System.out.print("Enter Username: ");
-=======
                 System.out.println("\n=== LIBRARY SYSTEM LOGIN ===");
-                System.out.println("Enter Username:");
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
+                System.out.print("Enter Username: ");
                 String username = scanner.nextLine();
 
                 System.out.print("Enter Password: ");
                 String password = scanner.nextLine();
 
-                // تمرير bookService يسمح بتحديث الغرامات بصمت عند دخول المستخدم
+                // محاولة تسجيل الدخول
                 loggedInUser = userService.login(username, password, bookService);
 
-<<<<<<< HEAD
-                    switch (loggedInUser.getRole().toLowerCase()) {
-                        case "user":
-                            // تحديث بيانات اليوزر من القائمة للتأكد من وجود الإيميل والكتب
-                            loggedInUser = userService.findUserByName(loggedInUser.getName());
-                            userService.login(loggedInUser.getName(), loggedInUser.getPassword());
-                            break;
-
-                        case "admin":
-                            adminService.loginAdmin(loggedInUser);
-                            break;
-
-                        case "librarian":
-                            // Librarian session handled later
-                            break;
-
-                        default:
-                            System.out.println("❌ Unknown role! Logging out.");
-                            loggedInUser = null;
-                            continue;
-                    }
-                    break; // كسر حلقة اللوجين والدخول للقوائم
-                }
-                System.out.println("❌ Wrong username or password! Try again.");
-=======
                 if (loggedInUser != null) break;
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
             }
 
-<<<<<<< HEAD
-            // تحديد القائمة حسب الدور
-=======
             // تحديد الدور وتوجيه المستخدم للقائمة المناسبة
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
             String role = loggedInUser.getRole();
 
             switch (role.toLowerCase()) {
@@ -143,7 +56,7 @@ public class mymain {
                     System.out.println("❌ Unknown role! Returning to login screen.");
             }
 
-            System.out.println("\n🔄 Returning to Main Screen...\n");
+            System.out.println("\n🔄 Returning to Login screen...\n");
         }
     }
 
@@ -152,28 +65,15 @@ public class mymain {
         while (true) {
             System.out.println("\n===== ADMIN MENU =====");
             System.out.println("1. Add Book");
-<<<<<<< HEAD
-            System.out.println("2. Add CD");
-            System.out.println("3. Search Media (Books + CDs)");
-            System.out.println("4. Send Reminder Emails (Observer Pattern)"); // ✅
-=======
-            System.out.println("2. Add CD"); // ✅ مفعل الآن
+            System.out.println("2. Add CD"); 
             System.out.println("3. Search Media");
-            System.out.println("4. Send Reminder Emails");
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
+            System.out.println("4. Send Reminder Emails"); // ✅ تفعيل الخيار
             System.out.println("5. Unregister User");
             System.out.println("6. View All Media (Books & CDs)");
             System.out.println("7. Logout");
             System.out.println("======================");
             System.out.print("Enter your choice: ");
 
-<<<<<<< HEAD
-            int choice;
-            try {
-                choice = Integer.parseInt(scanner.nextLine());
-            } catch (NumberFormatException e) {
-                System.out.println("Invalid input.");
-=======
             int choice = -1;
             try {
                 choice = scanner.nextInt();
@@ -181,7 +81,6 @@ public class mymain {
             } catch (Exception e) {
                 scanner.nextLine();
                 System.out.println("❌ Invalid input.");
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
                 continue;
             }
 
@@ -201,7 +100,6 @@ public class mymain {
                     break;
 
                 case 2:
-                    // ✅ US5.1: إضافة CD
                     if (!adminService.isLoggedIn()) {
                         System.out.println("⚠ Please log in as Admin first!");
                         break;
@@ -222,34 +120,23 @@ public class mymain {
                     break;
 
                 case 4:
-<<<<<<< HEAD
-                    // ✅ تفعيل الكود الخاص بالسبرنت 3
-                    System.out.println("📩 Sending overdue reminders...");
-                    // نمرر قائمة الكتب كلها للخدمة وهي تفحص المتأخر وترسل إيميلات
-                    reminderService.sendOverdueReminders(bookService.getAllBooks());
-=======
-                    // ✅ تفعيل إرسال الإيميلات
-                    // ملاحظة: تأكد أن AdminService تم تحديثه ليقبل List<Media> كما شرحنا سابقاً
-                	//adminService.sendOverdueReminders(userService.getAllUsers(), bookService.getAllBooks());
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
+                    // ✅ تم التعديل: استدعاء الدالة بشكل صحيح
+                    System.out.println("📧 Initiating email process...");
+                    adminService.sendOverdueReminders(userService, bookService);
                     break;
 
                 case 5:
-                    // ✅ تفعيل حذف المستخدم
                     System.out.println("\n=== Unregister User ===");
                     System.out.print("Enter username to delete: ");
                     String userToDelete = scanner.nextLine();
                     
-                    // استدعاء الدالة من AdminService للتحقق والحذف
                     adminService.unregisterUser(userToDelete, userService, bookService);
                     break;
 
                 case 6:
-                    // ✅ تعديل العرض ليشمل Media بدلاً من Book فقط
                     System.out.println("📚 All Media Status:");
                     boolean hasItems = false;
                     
-                    // نستخدم Media لأنه الأب المشترك للكتب والسيديات
                     for (media m : bookService.getAllBooks()) { 
                         hasItems = true;
                         String status;
@@ -261,7 +148,6 @@ public class mymain {
                         } else {
                             status = "🟢 Available";
                         }
-                        // Polymorphism: m.toString() will behave differently for Book vs CD
                         System.out.println(m.toString() + " | " + status);
                     }
                     if (!hasItems) System.out.println("No items in library.");
@@ -280,29 +166,15 @@ public class mymain {
     // =================== USER MENU ===================
     public static void userMenu(User user) {
         while (true) {
-<<<<<<< HEAD
             System.out.println("\n===== USER MENU (" + user.getName() + ") =====");
-            System.out.println("1. Search Book");
-            System.out.println("2. Borrow Book");
-            System.out.println("3. Return Book");
-=======
-            System.out.println("\n===== USER MENU =====");
             System.out.println("1. Search Media");
             System.out.println("2. Borrow Item (Book/CD)");
             System.out.println("3. Return Item");
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
             System.out.println("4. Pay Fine");
             System.out.println("5. Logout");
             System.out.println("======================");
             System.out.print("Enter choice: ");
 
-<<<<<<< HEAD
-            int choice;
-            try {
-                choice = Integer.parseInt(scanner.nextLine());
-            } catch (NumberFormatException e) {
-                System.out.println("Invalid input.");
-=======
             int choice = -1;
             try {
                 choice = scanner.nextInt();
@@ -310,7 +182,6 @@ public class mymain {
             } catch (Exception e) {
                 scanner.nextLine();
                 System.out.println("❌ Invalid input.");
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
                 continue;
             }
 
@@ -328,13 +199,12 @@ public class mymain {
                     }
                     System.out.print("Enter ISBN (Book) or Barcode (CD) to borrow: ");
                     String id = scanner.nextLine();
-                    bookService.borrowBook(user, id); // الدالة الآن تدعم الاثنين
+                    bookService.borrowBook(user, id); 
                     break;
 
                 case 3:
                     if (user.getOutstandingFine() > 0) {
-                        System.out.println("❌ You cannot return items until you pay your fines (Logic from previous sprint). Outstanding fine: " + user.getOutstandingFine());
-                        break;
+                        System.out.println("❌ Note: You have unpaid fines (" + user.getOutstandingFine() + "), but you can still return items to stop fine accumulation.");
                     }
                     System.out.print("Enter ISBN or Barcode to return: ");
                     String returnId = scanner.nextLine();
@@ -348,16 +218,6 @@ public class mymain {
                     } else {
                         System.out.println("💰 Your outstanding fine: " + fine);
                         System.out.print("Enter amount to pay: ");
-<<<<<<< HEAD
-                        double amount;
-                        try {
-                            amount = Double.parseDouble(scanner.nextLine());
-                        } catch (NumberFormatException e) {
-                            System.out.println("Invalid amount.");
-                            break;
-                        }
-                        userService.payFine(user, amount);
-=======
                         double amount = -1;
                         try {
                             amount = scanner.nextDouble();
@@ -368,7 +228,6 @@ public class mymain {
                             break;
                         }
                         userService.payFine(user, amount, bookService);
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
                     }
                     break;
 
@@ -395,13 +254,6 @@ public class mymain {
             System.out.println("===========================");
             System.out.print("Enter choice: ");
 
-<<<<<<< HEAD
-            int choice;
-            try {
-                choice = Integer.parseInt(scanner.nextLine());
-            } catch (NumberFormatException e) {
-                System.out.println("Invalid input.");
-=======
             int choice = -1;
             try {
                 choice = scanner.nextInt();
@@ -409,7 +261,6 @@ public class mymain {
             } catch (Exception e) {
                 scanner.nextLine();
                 System.out.println("❌ Invalid input.");
->>>>>>> branch 'master' of https://github.com/layalqaradeh/remot_LW.git
                 continue;
             }
 

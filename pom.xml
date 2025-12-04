@@ -3,44 +3,26 @@
   <groupId>library</groupId>
   <artifactId>library-system</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  
-  <properties>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
-  </properties>
-
   <dependencies>
-      <!-- مكتبة JUnit 5 للاختبار -->
-      <dependency>
-          <groupId>org.junit.jupiter</groupId>
-          <artifactId>junit-jupiter-api</artifactId>
-          <version>5.8.2</version>
-          <scope>test</scope>
-      </dependency>
-      <dependency>
-          <groupId>org.junit.jupiter</groupId>
-          <artifactId>junit-jupiter-engine</artifactId>
-          <version>5.8.2</version>
-          <scope>test</scope>
-      </dependency>
-<!-- مكتبة إرسال الإيميلات الحقيقية -->
-<dependency>
+	<dependency>
     <groupId>com.sun.mail</groupId>
     <artifactId>javax.mail</artifactId>
     <version>1.6.2</version>
+    </dependency>
+    <!-- مكتبة Mockito الأساسية -->
+<dependency>
+    <groupId>org.mockito</groupId>
+    <artifactId>mockito-core</artifactId>
+    <version>5.3.1</version>
+    <scope>test</scope>
 </dependency>
-      <!-- مكتبة Mockito لعمل Mocking -->
-      <dependency>
-          <groupId>org.mockito</groupId>
-          <artifactId>mockito-core</artifactId>
-          <version>4.5.1</version>
-          <scope>test</scope>
-      </dependency>
-      <dependency>
-          <groupId>org.mockito</groupId>
-          <artifactId>mockito-junit-jupiter</artifactId>
-          <version>4.5.1</version>
-          <scope>test</scope>
-      </dependency>
-  </dependencies>
+
+<!-- مكتبة ربط Mockito مع JUnit 5 (مهمة جداً للـ @ExtendWith) -->
+<dependency>
+    <groupId>org.mockito</groupId>
+    <artifactId>mockito-junit-jupiter</artifactId>
+    <version>5.3.1</version>
+    <scope>test</scope>
+</dependency>
+</dependencies>
 </project>

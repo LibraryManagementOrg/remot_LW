@@ -1,22 +1,13 @@
 package service;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import model.Book;
-import model.BorrowRecord;
-import java.util.ArrayList;
-import java.util.List;
 import model.Book;
 import model.User;
+import model.BorrowRecord;
 
-// هذا الكلاس لم نعد نستخدمه بشكل رئيسي في المين الجديد
-// لأن العمليات انتقلت لـ BookService
+import java.util.ArrayList;
+import java.util.List;
+
 public class BorrowService {
-    // يمكنك تركه كما هو أو حذفه إذا لم يكن مستخدماً
-}
-
-/*public class BorrowService {
     private List<BorrowRecord> borrowRecords = new ArrayList<>();
     private UserService userService;
 
@@ -60,4 +51,3 @@ public class BorrowService {
         return borrowRecords;
     }
 }
-*/
