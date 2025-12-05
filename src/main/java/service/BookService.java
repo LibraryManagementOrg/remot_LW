@@ -7,21 +7,39 @@ import model.User;
 
 import java.io.*;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 public class BookService {
 
-    // 🌟 تغيير القائمة لتستوعب Media (كتب + CDs)
     private List<media> items = new ArrayList<>();
     
     private AdminService adminService;
     private UserService userService;
-    private final String FILE_PATH = "src/main/resources/books.txt";
+    
+    // ✅ جعلنا المسار متغيراً وليس final ليمكن تغييره في الاختبارات
+    private String filePath = "src/main/resources/books.txt"; 
 
+    // =============================================================
+    // 1️⃣ الكونستركتور الافتراضي (للبرنامج الرئيسي)
+    // =============================================================
     public BookService(AdminService adminService, UserService userService) {
         this.adminService = adminService;
         this.userService = userService;
+        // يستخدم المسار الافتراضي (books.txt)
+        loadItemsFromFile();
+    }
+
+    // =============================================================
+    // 2️⃣ كونستركتور مخصص للاختبارات (Test Constructor)
+    // ✅ يسمح بتمرير مسار ملف وهمي لكي لا نعدل الملف الأصلي
+    // =============================================================
+    public BookService(AdminService adminService, UserService userService, String testFilePath) {
+        this.adminService = adminService;
+        this.userService = userService;
+        this.filePath = testFilePath; // استخدام الملف الوهمي
         loadItemsFromFile();
     }
 
@@ -29,13 +47,13 @@ public class BookService {
     //      تحميل الوسائط من الملف
     // =============================
     private void loadItemsFromFile() {
-        File file = new File(FILE_PATH);
+        File file = new File(this.filePath); // ✅ استخدام المتغير
         if (!file.exists()) {
-            System.out.println("📂 No library data file found. A new one will be created.");
+            // لا نطبع رسالة خطأ هنا لأن إنشاء ملف جديد أمر طبيعي في البداية
             return;
         }
 
-        try (BufferedReader br = new BufferedReader(new FileReader(FILE_PATH))) {
+        try (BufferedReader br = new BufferedReader(new FileReader(this.filePath))) { // ✅ استخدام المتغير
             String line;
             while ((line = br.readLine()) != null) {
                 if (line.trim().isEmpty()) continue;
@@ -51,7 +69,6 @@ public class BookService {
 
                 media item = null;
 
-                // 🌟 التمييز بين الكتاب والسي دي عند التحميل
                 if (type.equalsIgnoreCase("BOOK")) {
                     item = new Book(title, creator, id);
                 } else if (type.equalsIgnoreCase("CD")) {
@@ -59,15 +76,12 @@ public class BookService {
                 }
 
                 if (item != null) {
-                    // استعادة الحالة (مستعار أم لا)
                     if (parts.length > 4) item.setBorrowed(Boolean.parseBoolean(parts[4]));
                     if (parts.length > 5 && !parts[5].equals("null")) item.setDueDate(LocalDate.parse(parts[5]));
                     
-                    // استعادة المستخدم المستعير
                     if (parts.length > 6 && !parts[6].equals("null")) {
-                        // نحاول ربطه بمستخدم حقيقي من UserService
                         User u = userService.findUserByName(parts[6]);
-                        if (u == null) u = new User(parts[6], "", "User"); // Fallback
+                        if (u == null) u = new User(parts[6], "", "User");
                         item.setBorrowedBy(u);
                     }
                     
@@ -84,15 +98,13 @@ public class BookService {
     // =============================
     //        حفظ الوسائط للملف
     // =============================
-    public void saveBooksToFile() { // الاسم بقي كما هو لعدم كسر الكود في أماكن أخرى
-        try (PrintWriter pw = new PrintWriter(new FileWriter(FILE_PATH))) {
+    public void saveBooksToFile() { 
+        try (PrintWriter pw = new PrintWriter(new FileWriter(this.filePath))) { // ✅ استخدام المتغير
             for (media m : items) {
-                // تحديد النوع للحفظ
                 String type = (m instanceof CD) ? "CD" : "BOOK";
                 String user = (m.getBorrowedBy() != null) ? m.getBorrowedBy().getName() : "null";
                 String date = (m.getDueDate() != null) ? m.getDueDate().toString() : "null";
 
-                // كتابة السطر
                 pw.println(type + ";" +
                            m.getTitle() + ";" +
                            m.getCreator() + ";" +
@@ -116,8 +128,9 @@ public class BookService {
             return;
         }
 
+        // ✅ التحقق من الرقم الفريد
         if (findMediaById(isbn) != null) {
-            System.out.println("⚠ An item with this ID already exists.");
+            System.out.println("⛔ Error: A media item with ID (ISBN) [" + isbn + "] already exists!");
             return;
         }
 
@@ -127,7 +140,7 @@ public class BookService {
     }
 
     // =============================
-    //        إضافة CD (جديد)
+    //        إضافة CD
     // =============================
     public void addCD(String title, String artist, String barcode) {
         if (!adminService.isLoggedIn()) {
@@ -135,8 +148,9 @@ public class BookService {
             return;
         }
 
+        // ✅ التحقق من الرقم الفريد
         if (findMediaById(barcode) != null) {
-            System.out.println("⚠ An item with this ID already exists.");
+            System.out.println("⛔ Error: A media item with ID (Barcode) [" + barcode + "] already exists!");
             return;
         }
 
@@ -146,7 +160,7 @@ public class BookService {
     }
 
     // =============================
-    //         البحث (شامل)
+    //         البحث
     // =============================
     public void searchBook(String keyword) {
         List<media> results = new ArrayList<>();
@@ -155,7 +169,6 @@ public class BookService {
             if (m.getTitle().toLowerCase().contains(keyword.toLowerCase()) ||
                 m.getCreator().toLowerCase().contains(keyword.toLowerCase()) ||
                 m.getId().equalsIgnoreCase(keyword)) {
-
                 results.add(m);
             }
         }
@@ -165,18 +178,19 @@ public class BookService {
         } else {
             System.out.println("🔍 Search results:");
             for (media m : results) {
-                System.out.println(m); // سيستخدم toString الخاص بـ Book أو CD
+                System.out.println(m);
             }
         }
     }
 
     // =============================
-    //        استعارة (Polymorphic)
+    //        استعارة
     // =============================
     public boolean borrowBook(User user, String id) {
         User realUser = userService.findUserByName(user.getName());
 
-        if (!realUser.canBorrow()) {
+        // ✅ منع الاستعارة في حال وجود غرامات
+        if (realUser.getOutstandingFine() > 0) { 
             System.out.println("❌ You cannot borrow new items until you pay your fines.");
             return false;
         }
@@ -192,7 +206,6 @@ public class BookService {
             return false;
         }
 
-        // 🌟 Polymorphism: getLoanPeriod() will return 28 for Book, 7 for CD
         item.setBorrowed(true);
         item.setBorrowedBy(realUser);
         item.setDueDate(LocalDate.now().plusDays(item.getLoanPeriod())); 
@@ -206,7 +219,7 @@ public class BookService {
     }
 
     // =============================
-    //         إرجاع (Polymorphic)
+    //         إرجاع (مع الدفع الفوري)
     // =============================
     public void returnBook(String id, User user) {
         media item = findMediaById(id);
@@ -227,18 +240,47 @@ public class BookService {
             return;
         }
 
-        // إرجاع العنصر
+        // --- التحقق من التأخير وحساب الغرامة ---
+        double fineAmount = 0.0;
+        if (item.getDueDate() != null && LocalDate.now().isAfter(item.getDueDate())) {
+            long daysOverdue = ChronoUnit.DAYS.between(item.getDueDate(), LocalDate.now());
+            
+            // حساب الغرامة (2 للكتاب، 5 للسي دي)
+            double dailyFine = (item instanceof Book) ? 2.0 : 5.0; 
+            fineAmount = daysOverdue * dailyFine;
+
+            System.out.println("⚠ ALERT: This item is OVERDUE by " + daysOverdue + " days.");
+            System.out.println("💲 Total Fine required to return: $" + fineAmount);
+            System.out.println("🛑 You cannot return this item without paying the fine.");
+            
+            System.out.print("Do you want to pay now and return the item? (yes/no): ");
+            Scanner scanner = new Scanner(System.in); 
+            String choice = scanner.next();
+
+            if (!choice.equalsIgnoreCase("yes")) {
+                System.out.println("❌ Return cancelled. You must pay to return the item.");
+                return; // 🛑 إيقاف العملية
+            }
+
+            System.out.println("💸 Processing payment of $" + fineAmount + "...");
+            System.out.println("✅ Payment Successful!");
+            // لا نضيف الغرامة لحساب المستخدم لأنه دفعها فوراً
+        }
+
+        // --- إتمام عملية الإرجاع ---
         item.setBorrowed(false);
         item.setDueDate(null);
         item.setBorrowedBy(null);
         item.setFineIssued(false);
         
         saveBooksToFile();
-        System.out.println("📘 Item returned successfully!");
+        
+        String typeEmoji = (item instanceof Book) ? "📘" : "💿";
+        System.out.println(typeEmoji + " Item returned successfully and is now AVAILABLE!");
     }
 
     // =============================
-    //     البحث عبر ID (ISBN/Barcode)
+    //     البحث عبر ID
     // =============================
     public media findMediaById(String id) {
         for (media m : items) {
@@ -247,15 +289,12 @@ public class BookService {
         return null;
     }
 
-    // =============================
-    //     عرض كل الوسائط
-    // =============================
     public List<media> getAllBooks() {
         return items;
     }
 
     // =============================
-    //   جعل عنصر متأخر (للتجربة)
+    //   جعل عنصر متأخر (للاختبار)
     // =============================
     public void makeBookOverdue(String id, int days) {
         media m = findMediaById(id);

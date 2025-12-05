@@ -1,7 +1,7 @@
 package service;
 
 import model.User;
-import model.media; // تأكد من أن اسم الكلاس عندك يبدأ بحرف صغير كما أرسلته (media)
+import model.media;
 import java.io.*;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -12,32 +12,46 @@ public class UserService {
 
     private List<User> users;
     private User loggedInUser;
-    private final String FILE_PATH = "src/main/resources/users.txt";
+    
+    // ✅ 1. جعل المسار متغيراً وليس final
+    private String filePath = "src/main/resources/users.txt";
 
+    // =============================================================
+    // 2. الكونستركتور الافتراضي (للبرنامج الرئيسي)
+    // =============================================================
     public UserService() {
         users = new ArrayList<>();
-        loadUsersFromFile(FILE_PATH);
+        loadUsersFromFile();
     }
 
     // =============================================================
-    // 📂 تحميل المستخدمين (تعديل لقراءة الإيميل)
+    // 3. كونستركتور مخصص للاختبارات (Test Constructor)
+    // ✅ يسمح بتمرير مسار ملف وهمي لكي لا نعدل الملف الأصلي
     // =============================================================
-    private void loadUsersFromFile(String filePath) {
-        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+    public UserService(String testFilePath) {
+        this.filePath = testFilePath; // استخدام الملف الوهمي
+        users = new ArrayList<>();
+        loadUsersFromFile();
+    }
+
+    // =============================================================
+    // 📂 تحميل المستخدمين
+    // =============================================================
+    private void loadUsersFromFile() {
+        // ✅ استخدام this.filePath بدلاً من الثابت
+        try (BufferedReader br = new BufferedReader(new FileReader(this.filePath))) {
             String line;
             while ((line = br.readLine()) != null) {
                 if (line.trim().isEmpty()) continue;
                 
                 String[] parts = line.split(",");
                 
-                // التأكد من وجود البيانات الأساسية (الاسم، الباسورد، الرول)
                 if (parts.length >= 3) {
                     String username = parts[0].trim();
                     String password = parts[1].trim();
                     String role = parts[2].trim();
                     
                     double fine = 0.0;
-                    // قراءة الغرامة (الخانة 4)
                     if (parts.length >= 4) {
                         try { 
                             fine = Double.parseDouble(parts[3].trim()); 
@@ -46,19 +60,35 @@ public class UserService {
                         }
                     }
 
-                    // ✅ قراءة الإيميل (الخانة 5)
                     String email = "";
                     if (parts.length >= 5) {
                         email = parts[4].trim();
                     }
 
-                    // استخدام الكونستركتور الجديد الذي يحتوي على الإيميل
                     User user = new User(username, password, role, fine, email);
                     users.add(user);
                 }
             }
         } catch (IOException e) {
             System.out.println("⚠ Error reading users file: " + e.getMessage());
+        }
+    }
+
+    // =============================================================
+    // 💾 حفظ المستخدمين
+    // =============================================================
+    public void saveUsersToFile() {
+        // ✅ استخدام this.filePath بدلاً من الثابت
+        try (PrintWriter pw = new PrintWriter(new FileWriter(this.filePath))) {
+            for (User u : users) {
+                pw.println(u.getName() + "," + 
+                           u.getPassword() + "," + 
+                           u.getRole() + "," + 
+                           u.getOutstandingFine() + "," + 
+                           u.getEmail());
+            }
+        } catch (IOException e) {
+            System.out.println("❌ Error saving users file: " + e.getMessage());
         }
     }
 
@@ -90,7 +120,7 @@ public class UserService {
     public User getLoggedInUser() { return loggedInUser; }
 
     // =============================================================
-    // 💰 دفع الغرامة + تقرير تفصيلي
+    // 💰 دفع الغرامة
     // =============================================================
     public void payFine(User user, double amount, BookService bookService) {
         if (loggedInUser == null || !loggedInUser.equals(user)) {
@@ -98,7 +128,6 @@ public class UserService {
             return;
         }
 
-        // 1️⃣ عرض تقرير مفصل للغرامات
         System.out.println("\n📊 --- YOUR FINE BREAKDOWN ---");
         boolean hasOverdueItems = false;
 
@@ -129,7 +158,6 @@ public class UserService {
         System.out.println("💰 Total Outstanding Balance: " + user.getOutstandingFine() + " NIS");
         System.out.println("-------------------------------------\n");
 
-        // 2️⃣ التحقق من المبلغ المدخل
         if (amount <= 0) {
             System.out.println("❌ Invalid amount. Please enter a positive value.");
             return;
@@ -140,10 +168,8 @@ public class UserService {
             return;
         }
 
-        // 3️⃣ الخصم
         user.setOutstandingFine(user.getOutstandingFine() - amount);
 
-        // 4️⃣ إرجاع الكتب تلقائياً عند تصفير الدين
         if (user.getOutstandingFine() == 0 && bookService != null) {
             boolean itemsReturned = false;
             for (media m : bookService.getAllBooks()) {
@@ -164,11 +190,10 @@ public class UserService {
             if (itemsReturned) bookService.saveBooksToFile();
         }
 
-        saveUsersToFile(); // حفظ التغييرات (بما فيها الإيميل)
+        saveUsersToFile(); 
         System.out.println("✅ Payment successful. Remaining balance: " + user.getOutstandingFine());
     }
 
-    // تحديث الغرامات
     public void checkAndApplyFinesForAllUsers(BookService bookService) {
         boolean usersUpdated = false;
         boolean booksUpdated = false;
@@ -220,22 +245,4 @@ public class UserService {
     }
 
     public List<User> getAllUsers() { return users; }
-
-    // =============================================================
-    // 💾 حفظ المستخدمين (تعديل لحفظ الإيميل)
-    // =============================================================
-    public void saveUsersToFile() {
-        try (PrintWriter pw = new PrintWriter(new FileWriter(FILE_PATH))) {
-            for (User u : users) {
-                // ✅ إضافة الإيميل في نهاية السطر
-                pw.println(u.getName() + "," + 
-                           u.getPassword() + "," + 
-                           u.getRole() + "," + 
-                           u.getOutstandingFine() + "," + 
-                           u.getEmail());
-            }
-        } catch (IOException e) {
-            System.out.println("❌ Error saving users file: " + e.getMessage());
-        }
-    }
 }

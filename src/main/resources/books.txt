@@ -1,4 +1,5 @@
 BOOK;frfcsdf;3rf3w;2345;true;2025-11-29;ahmad;true
 CD;frfe;fw433;24242;true;2025-12-04;waad;true
 CD;rgrg;r3wr;12345;false;null;null;false
-book;frfe;fw433;24242;true;2025-12-04;waad;true
+BOOK;frfe;fw433;24242;true;2025-12-04;waad;true
+BOOK;TestBook;TestAuthor;999-999;false;null;null;false

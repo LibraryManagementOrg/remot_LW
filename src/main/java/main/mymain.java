@@ -1,3 +1,6 @@
+package main;
+
+
 import service.*;
 import model.*;
 
@@ -121,7 +124,7 @@ public class mymain {
 
                 case 4:
                     // ✅ تم التعديل: استدعاء الدالة بشكل صحيح
-                    System.out.println("📧 Initiating email process...");
+                  //  System.out.println("📧 Initiating email process...");
                     adminService.sendOverdueReminders(userService, bookService);
                     break;
 
@@ -163,7 +166,7 @@ public class mymain {
         }
     }
 
-    // =================== USER MENU ===================
+ // =================== USER MENU ===================
     public static void userMenu(User user) {
         while (true) {
             System.out.println("\n===== USER MENU (" + user.getName() + ") =====");
@@ -193,8 +196,11 @@ public class mymain {
                     break;
 
                 case 2:
+                    // منع الاستعارة إذا كان عليه غرامات
                     if (user.getOutstandingFine() > 0) {
-                        System.out.println("❌ You cannot borrow items until you pay your fines. Outstanding fine: " + user.getOutstandingFine());
+                        System.out.println("❌ BLOCKED: You cannot borrow items.");
+                        System.out.println("💰 You have unpaid fines: $" + user.getOutstandingFine());
+                        System.out.println("👉 Please go to Option 4 to pay first.");
                         break;
                     }
                     System.out.print("Enter ISBN (Book) or Barcode (CD) to borrow: ");
@@ -203,11 +209,20 @@ public class mymain {
                     break;
 
                 case 3:
+                    // 🔥 التعديل المطلوب هنا 🔥
+                    // شرط صارم: إذا الغرامة أكبر من صفر، ممنوع يرجع أي شيء
                     if (user.getOutstandingFine() > 0) {
-                        System.out.println("❌ Note: You have unpaid fines (" + user.getOutstandingFine() + "), but you can still return items to stop fine accumulation.");
+                        System.out.println("❌ ACTION DENIED: You cannot return items while you have unpaid fines.");
+                        System.out.println("💰 Your Outstanding Fine: $" + user.getOutstandingFine());
+                        System.out.println("👉 Please go to Option 4 (Pay Fine) and clear your balance first.");
+                        break; // 🛑 خروج فوري من الكيس
                     }
+
+                    // إذا وصل هنا، يعني رصيده نظيف (0 غرامات)
                     System.out.print("Enter ISBN or Barcode to return: ");
                     String returnId = scanner.nextLine();
+                    
+                    // استدعاء دالة الإرجاع التي ستجعل الكتاب Available في الملف
                     bookService.returnBook(returnId, user);
                     break;
 
@@ -218,16 +233,15 @@ public class mymain {
                     } else {
                         System.out.println("💰 Your outstanding fine: " + fine);
                         System.out.print("Enter amount to pay: ");
-                        double amount = -1;
                         try {
-                            amount = scanner.nextDouble();
+                            double amount = scanner.nextDouble();
                             scanner.nextLine();
+                            // دالة الدفع التي ستصفر الغرامة
+                            userService.payFine(user, amount, bookService);
                         } catch (Exception e) {
                             scanner.nextLine();
                             System.out.println("❌ Invalid number.");
-                            break;
                         }
-                        userService.payFine(user, amount, bookService);
                     }
                     break;
 
@@ -240,7 +254,6 @@ public class mymain {
             }
         }
     }
-
     // =================== LIBRARIAN MENU ===================
     public static void librarianMenu(User librarian) {
         LibrarianService librarianService = new LibrarianService();

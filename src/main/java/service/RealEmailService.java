@@ -7,15 +7,22 @@ import java.util.Properties;
 
 public class RealEmailService implements NotificationObserver {
 
-    // 🔴 1. هنا ضعي إيميل الـ GMAIL الذي استخرجتِ الباسورد من إعداداته
-    // ❌ لا تضعي إيميل الجامعة هنا
+    // بيانات الدخول الخاصة بك
     private final String myEmail = "s12218557@stu.najah.edu"; 
-    
-    // 🔴 2. هنا ضعي الـ 16 حرف التي ظهرت لك في الخطوة 4
     private final String myPassword = "ylvc iqnl bnsh klxy"; 
 
     @Override
     public void update(User user, String messageText) {
+        
+        // ---------------------------------------------------------
+        // ✅ التعديل الجديد: التحقق من وجود إيميل قبل محاولة الإرسال
+        // هذا يمنع NullPointerException ويصلح خطأ التيست
+        // ---------------------------------------------------------
+        if (user.getEmail() == null || user.getEmail().trim().isEmpty()) {
+            System.out.println("⚠ Warning: User [" + user.getName() + "] has no email address. Email skipped.");
+            return; // الخروج من الدالة فوراً دون محاولة الاتصال
+        }
+
         System.out.println("⏳ Connecting to Gmail...");
 
         Properties prop = new Properties();
@@ -28,17 +35,16 @@ public class RealEmailService implements NotificationObserver {
         Session session = Session.getInstance(prop, new Authenticator() {
             @Override
             protected PasswordAuthentication getPasswordAuthentication() {
-                // الكود يستخدم إيميلك وباسورد التطبيق للدخول للسيرفر
                 return new PasswordAuthentication(myEmail, myPassword);
             }
         });
 
         try {
             Message message = new MimeMessage(session);
-            // المرسل هو إيميلك الجيميل
+            // المرسل
             message.setFrom(new InternetAddress(myEmail));
             
-            // المستقبل هو الطالب (يأخذ الإيميل من ملف users.txt)
+            // المستقبل (الآن نحن متأكدون أنه ليس null)
             message.setRecipients(
                     Message.RecipientType.TO,
                     InternetAddress.parse(user.getEmail()) 
@@ -52,6 +58,7 @@ public class RealEmailService implements NotificationObserver {
             System.out.println("✅ REAL Email Sent Successfully to: " + user.getEmail());
 
         } catch (MessagingException e) {
+            // التعامل مع أخطاء الاتصال بالشبكة أو كلمة المرور
             System.out.println("❌ Failed to send email via Gmail.");
             e.printStackTrace();
         }
