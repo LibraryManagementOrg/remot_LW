@@ -6,25 +6,19 @@ import java.time.LocalDate;
  * Represents a Book.
  * Updated for Sprint 5 to extend Media and use Strategy Pattern.
  */
-public class Book extends media { // ✅ تأكد أن Media مكتوبة بحرف كبير (Class Name)
+public class Book extends media { 
 
     public Book(String title, String author, String isbn) {
-        // نمرر البيانات للكلاس الأب Media
-        // (title, creator, id) -> (title, author, isbn)
         super(title, author, isbn);
         
-        // ✅ هذا السطر كان يعطي خطأ لأنك لم تنشئ كلاس BookFineStrategy بعد
-        // الآن بعد إنشاء الملف في الخطوة 1، سيعمل هذا السطر بنجاح
         this.setFineStrategy(new BookFineStrategy());
     }
 
-    // ==========================================
-    // ✅ تنفيذ الدوال المطلوبة من الكلاس الأب
-    // ==========================================
-    
+    public void setFineAmount(double amount) {
+      }
     @Override
     public int getLoanPeriod() {
-        return 28; // Sprint 2 requirement
+        return 28; 
     }
 
     @Override
@@ -32,17 +26,10 @@ public class Book extends media { // ✅ تأكد أن Media مكتوبة بحر
         return 10.0; // Sprint 5 requirement (Used if strategy fails)
     }
 
-    // ==========================================
-    // 🔄 دوال للحفاظ على عمل الكود القديم (Backward Compatibility)
-    // ==========================================
-
     public String getAuthor() { return super.getCreator(); }
     public String getIsbn() { return super.getId(); }
 
-    // ==========================================
-    // ⚙️ المنطق (يستخدم دوال الأب)
-    // ==========================================
-
+    
     public void borrow(User user) {
         if (isBorrowed()) {
             throw new IllegalStateException("Book is already borrowed!");
@@ -65,10 +52,7 @@ public class Book extends media { // ✅ تأكد أن Media مكتوبة بحر
         return super.getFineAmount(); 
     }
 
-    // ==========================================
-    // 💾 التعامل مع الملفات
-    // ==========================================
-
+  
     @Override
     public String toString() {
         return "Book: " + getTitle() + " | Author: " + getAuthor() + " | ISBN: " + getIsbn();

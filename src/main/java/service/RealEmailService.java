@@ -7,26 +7,20 @@ import java.util.Properties;
 
 public class RealEmailService implements NotificationObserver {
 
-    // بيانات الدخول الخاصة بك
     private final String myEmail = "s12218557@stu.najah.edu"; 
-    private final String myPassword = "ylvc iqnl bnsh klxy"; 
+    private final String myPassword = System.getenv("EMAIL_PASSWORD");
 
     @Override
     public void update(User user, String messageText) {
         
-        // ---------------------------------------------------------
-        // ✅ التعديل الجديد: التحقق من وجود إيميل قبل محاولة الإرسال
-        // هذا يمنع NullPointerException ويصلح خطأ التيست
-        // ---------------------------------------------------------
         if (user.getEmail() == null || user.getEmail().trim().isEmpty()) {
             System.out.println("⚠ Warning: User [" + user.getName() + "] has no email address. Email skipped.");
-            return; // الخروج من الدالة فوراً دون محاولة الاتصال
+            return;
         }
 
         System.out.println("⏳ Connecting to Gmail...");
 
         Properties prop = new Properties();
-        // إعدادات سيرفر Gmail
         prop.put("mail.smtp.host", "smtp.gmail.com");
         prop.put("mail.smtp.port", "587");
         prop.put("mail.smtp.auth", "true");
@@ -41,10 +35,8 @@ public class RealEmailService implements NotificationObserver {
 
         try {
             Message message = new MimeMessage(session);
-            // المرسل
             message.setFrom(new InternetAddress(myEmail));
             
-            // المستقبل (الآن نحن متأكدون أنه ليس null)
             message.setRecipients(
                     Message.RecipientType.TO,
                     InternetAddress.parse(user.getEmail()) 
@@ -58,7 +50,6 @@ public class RealEmailService implements NotificationObserver {
             System.out.println("✅ REAL Email Sent Successfully to: " + user.getEmail());
 
         } catch (MessagingException e) {
-            // التعامل مع أخطاء الاتصال بالشبكة أو كلمة المرور
             System.out.println("❌ Failed to send email via Gmail.");
             e.printStackTrace();
         }

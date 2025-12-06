@@ -26,7 +26,6 @@ class AdminServiceTest {
     private User adminUser;
     private User regularUser;
     
-    // لالتقاط الرسائل التي تطبع في Console
     private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
     private final PrintStream originalOut = System.out;
 
@@ -36,13 +35,11 @@ class AdminServiceTest {
         adminUser = new User("SuperAdmin", "123", "Admin");
         regularUser = new User("JohnDoe", "pass", "User");
         
-        // تحويل مسار الطباعة لالتقاط الرسائل وفحصها
         System.setOut(new PrintStream(outContent));
     }
 
     @AfterEach
     void tearDown() {
-        // إرجاع مسار الطباعة للوضع الطبيعي بعد كل اختبار
         System.setOut(originalOut);
     }
 
@@ -75,22 +72,19 @@ class AdminServiceTest {
         adminService.loginAdmin(null);
         
         assertFalse(adminService.isLoggedIn());
-        assertTrue(outContent.toString().contains("Access denied")); // يغطي الـ else
+        assertTrue(outContent.toString().contains("Access denied"));
     }
 
     @Test
     @DisplayName("Logout: Should reset state")
     void testLogout() {
-        // ترتيب: تسجيل دخول أولاً
         adminService.loginAdmin(adminUser);
         
-        // فعل: تسجيل خروج
-        adminService.logout();
+        String logoutResult = adminService.logout();
         
-        // تحقق
         assertFalse(adminService.isLoggedIn());
         assertNull(adminService.getCurrentUser());
-        assertTrue(outContent.toString().contains("logged out successfully"));
+        assertTrue(logoutResult.contains("logged out successfully"));
     }
 
     // =================================================================
@@ -109,8 +103,6 @@ class AdminServiceTest {
     void testShowBooksEmpty() {
         adminService.loginAdmin(adminUser);
         
-        // إنشاء BookService وهمي يرجع قائمة فارغة
-        // نمرر null للكونستركتور لأننا سنعيد تعريف الدالة getAllBooks فقط
         BookService stubBookService = new BookService(null, null, "dummy.txt") {
             @Override
             public List<media> getAllBooks() {
@@ -127,7 +119,6 @@ class AdminServiceTest {
     void testShowBooksWithItems() {
         adminService.loginAdmin(adminUser);
         
-        // إنشاء BookService وهمي يرجع كتاب واحد
         BookService stubBookService = new BookService(null, null, "dummy.txt") {
             @Override
             public List<media> getAllBooks() {
@@ -143,14 +134,14 @@ class AdminServiceTest {
     }
 
     // =================================================================
-    // 3. اختبار حذف المستخدم (Unregister User) - أهم جزء للكفرج
+    // 3. اختبار حذف المستخدم (Unregister User)
     // =================================================================
 
     @Test
     @DisplayName("Unregister: Fail (Not Logged In)")
     void testUnregisterNotLoggedIn() {
-        adminService.unregisterUser("any", null, null);
-        assertTrue(outContent.toString().contains("Access denied"));
+        String result = adminService.unregisterUser("any", null, null);
+        assertTrue(result.contains("Access denied"));
     }
 
     @Test
@@ -158,7 +149,6 @@ class AdminServiceTest {
     void testUnregisterUserNotFound() {
         adminService.loginAdmin(adminUser);
         
-        // UserService وهمي يرجع null عند البحث
         UserService stubUserService = new UserService("dummy.txt") {
             @Override
             public User findUserByName(String name) {
@@ -166,8 +156,8 @@ class AdminServiceTest {
             }
         };
 
-        adminService.unregisterUser("GhostUser", stubUserService, null);
-        assertTrue(outContent.toString().contains("User not found"));
+        String result = adminService.unregisterUser("GhostUser", stubUserService, null);
+        assertTrue(result.contains("User not found"));
     }
 
     @Test
@@ -175,18 +165,17 @@ class AdminServiceTest {
     void testUnregisterUserHasFines() {
         adminService.loginAdmin(adminUser);
         
-        // UserService وهمي يرجع مستخدم عليه غرامات
         UserService stubUserService = new UserService("dummy.txt") {
             @Override
             public User findUserByName(String name) {
                 User u = new User("BadUser", "pass", "User");
-                u.setOutstandingFine(50.0); // عليه غرامة
+                u.setOutstandingFine(50.0);
                 return u;
             }
         };
 
-        adminService.unregisterUser("BadUser", stubUserService, null);
-        assertTrue(outContent.toString().contains("Cannot delete user! They have unpaid fines"));
+        String result = adminService.unregisterUser("BadUser", stubUserService, null);
+        assertTrue(result.contains("unpaid fines"));
     }
 
     @Test
@@ -195,7 +184,6 @@ class AdminServiceTest {
         adminService.loginAdmin(adminUser);
         String targetUser = "Reader";
         
-        // UserService يرجع مستخدم سليم (بدون غرامات)
         UserService stubUserService = new UserService("dummy.txt") {
             @Override
             public User findUserByName(String name) {
@@ -203,13 +191,12 @@ class AdminServiceTest {
             }
         };
 
-        // BookService يرجع كتاباً مستعاراً من قبل هذا المستخدم
         BookService stubBookService = new BookService(null, null, "dummy.txt") {
             @Override
             public List<media> getAllBooks() {
                 Book b = new Book("Book1", "Auth", "111");
                 User u = new User(targetUser, "pass", "User");
-                b.borrow(u); // نجعل الكتاب مستعاراً
+                b.borrow(u);
                 
                 List<media> list = new ArrayList<>();
                 list.add(b);
@@ -217,8 +204,8 @@ class AdminServiceTest {
             }
         };
 
-        adminService.unregisterUser(targetUser, stubUserService, stubBookService);
-        assertTrue(outContent.toString().contains("Cannot delete user! They still have borrowed books"));
+        String result = adminService.unregisterUser(targetUser, stubUserService, stubBookService);
+        assertTrue(result.contains("still have borrowed books"));
     }
 
     @Test
@@ -227,19 +214,17 @@ class AdminServiceTest {
         adminService.loginAdmin(adminUser);
         String targetUser = "GoodUser";
 
-        // UserService جاهز للحذف
         UserService stubUserService = new UserService("dummy.txt") {
             @Override
             public User findUserByName(String name) {
                 return new User(targetUser, "pass", "User");
             }
             @Override
-            public boolean deleteUser(String name) {
-                return true; // محاكاة الحذف الناجح
+            public String deleteUser(String name) {
+                return "🗑 User [" + name + "] deleted."; 
             }
         };
 
-        // BookService يرجع قائمة خالية (أو كتب غير مستعارة من هذا المستخدم)
         BookService stubBookService = new BookService(null, null, "dummy.txt") {
             @Override
             public List<media> getAllBooks() {
@@ -247,8 +232,8 @@ class AdminServiceTest {
             }
         };
 
-        adminService.unregisterUser(targetUser, stubUserService, stubBookService);
-        assertTrue(outContent.toString().contains("unregistered successfully"));
+        String result = adminService.unregisterUser(targetUser, stubUserService, stubBookService);
+        assertTrue(result.contains("unregistered successfully"));
     }
 
     // =================================================================
@@ -258,8 +243,8 @@ class AdminServiceTest {
     @Test
     @DisplayName("Send Reminders: Fail (Not Logged In)")
     void testSendRemindersNotLoggedIn() {
-        adminService.sendOverdueReminders(null, null);
-        assertTrue(outContent.toString().contains("Access denied"));
+        String result = adminService.sendOverdueReminders(null, null);
+        assertTrue(result.contains("Access denied"));
     }
 
     @Test
@@ -267,17 +252,15 @@ class AdminServiceTest {
     void testSendRemindersSuccess() {
         adminService.loginAdmin(adminUser);
         
-        // نمرر خدمات وهمية بسيطة لتجنب أخطاء الملفات
         UserService stubUserService = new UserService("dummy.txt");
         BookService stubBookService = new BookService(null, null, "dummy.txt") {
             @Override
             public List<media> getAllBooks() {
-                return new ArrayList<>(); // قائمة فارغة لتجنب تعقيد الإيميلات
+                return new ArrayList<>();
             }
         };
 
-        // الهدف هنا التأكد من أن الدالة تعمل ولا تنهار، وأنها تطبع رسالة البدء
-        adminService.sendOverdueReminders(stubUserService, stubBookService);
-        assertTrue(outContent.toString().contains("Initiating notification process"));
+        String result = adminService.sendOverdueReminders(stubUserService, stubBookService);
+        assertTrue(result.contains("Notification process initiated"));
     }
 }

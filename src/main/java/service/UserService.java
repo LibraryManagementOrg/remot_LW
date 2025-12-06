@@ -146,10 +146,24 @@ public class UserService {
         return String.format("✅ Payment successful. Remaining balance: %.2f", user.getOutstandingFine());
     }
 
-    public void checkAndApplyFinesForAllUsers(BookService bookService) {
+  public void checkAndApplyFinesForAllUsers(BookService bookService) {
         boolean usersUpdated = false;
         boolean booksUpdated = false;
-        // ... (بقية الدالة كما هي) ...
+
+        for (media m : bookService.getAllBooks()) {
+            if (m.isBorrowed() && m.isOverdue() && !m.isFineIssued() && m.getBorrowedBy() != null) {
+                User borrower = findUserByName(m.getBorrowedBy().getName());
+                if (borrower != null) {
+                    double fine = m.getFineAmount();
+                    borrower.setOutstandingFine(borrower.getOutstandingFine() + fine);
+                    m.setFineIssued(true);
+                    usersUpdated = true;
+                    booksUpdated = true;
+                }
+            }
+        }
+        if (usersUpdated) saveUsersToFile();
+        if (booksUpdated) bookService.saveBooksToFile();
     }
 
     // 🔴 تم التعديل: يعيد String (بدلاً من boolean)
