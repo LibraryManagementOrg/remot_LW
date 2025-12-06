@@ -19,52 +19,38 @@ import static org.junit.jupiter.api.Assertions.*;
 class LoginServiceTest {
 
     private LoginService loginService;
-    
-    // ✅ 1. استخدام اسم ملف مختلف عن الملف الأصلي
     private final String TEST_FILE_PATH = "src/main/resources/users_login_test.txt";
     private File userFile;
-    
-    // لحفظ الـ System.in الأصلي
     private final InputStream originalIn = System.in;
 
     @BeforeEach
     void setUp() throws IOException {
-        // التأكد من وجود المجلدات
+        // إنشاء المجلد إذا لم يكن موجوداً
         File directory = new File("src/main/resources");
-        if (!directory.exists()) {
-            directory.mkdirs();
-        }
+        if (!directory.exists()) directory.mkdirs();
 
-        // 2. إنشاء ملف وهمي للاختبار
+        // إنشاء ملف وهمي
         userFile = new File(TEST_FILE_PATH);
         try (FileWriter writer = new FileWriter(userFile)) {
-            // بيانات وهمية
             writer.write("alice,123,User,50.0,alice@test.com\n");
             writer.write("bob,456,Admin\n");
             writer.write("charlie,789,Librarian,10.0\n");
         }
         
-        // ✅ 3. تهيئة الخدمة باستخدام الملف الوهمي
         loginService = new LoginService(TEST_FILE_PATH);
     }
 
     @AfterEach
     void tearDown() {
-        // استعادة System.in
-        System.setIn(originalIn);
-
-        // 4. حذف الملف الوهمي فقط (الملف الأصلي users.txt بأمان)
-        if (userFile.exists()) {
-            userFile.delete();
-        }
+        System.setIn(originalIn); // استعادة الإدخال الأصلي
+        if (userFile.exists()) userFile.delete(); // حذف الملف الوهمي
     }
 
     @Test
-    @DisplayName("1. Test Login Direct: Full Data (Success)")
+    @DisplayName("1. Direct Login: Full Data (Success)")
     void testLoginFullData() {
         User user = loginService.login("alice", "123");
-
-        assertNotNull(user);
+        assertNotNull(user, "User should be found");
         assertEquals("alice", user.getName());
         assertEquals("User", user.getRole());
         assertEquals(50.0, user.getOutstandingFine());
@@ -72,52 +58,82 @@ class LoginServiceTest {
     }
 
     @Test
-    @DisplayName("2. Test Login Direct: Partial Data (Success)")
+    @DisplayName("2. Direct Login: Partial Data (Success)")
     void testLoginPartialData() {
-        User user = loginService.login("bob", "456");
-
+        User user = loginService.login("bob", "456"); // Admin with no fine/email in file
         assertNotNull(user);
         assertEquals("bob", user.getName());
         assertEquals("Admin", user.getRole());
+        assertEquals(0.0, user.getOutstandingFine()); // Default value
     }
 
     @Test
-    @DisplayName("3. Test Login Direct: Wrong Credentials (Fail)")
+    @DisplayName("3. Direct Login: Failures")
     void testLoginFail() {
-        User user = loginService.login("alice", "wrongpass");
-        assertNull(user);
-
-        User user2 = loginService.login("notexist", "123");
-        assertNull(user2);
+        assertNull(loginService.login("alice", "wrongpass"), "Wrong password should fail");
+        assertNull(loginService.login("ghost", "123"), "Unknown user should fail");
     }
 
     @Test
-    @DisplayName("4. Test Login Loop: Simulate User Input")
+    @DisplayName("4. Login Loop: Handling User Input")
     void testLoginLoop() {
-        // محاكاة المدخلات: خطأ ثم خطأ ثم صحيح
+        // محاكاة سيناريو:
+        // 1. اسم خاطئ -> يعرض رسالة خطأ ويكرر
+        // 2. اسم صحيح وكلمة سر خطأ -> يعرض رسالة خطأ ويكرر
+        // 3. اسم صحيح وكلمة سر صحيحة -> ينجح ويخرج
         String simulatedInput = "wrong\n123\nalice\nwrongpass\nalice\n123\n";
         
+        // توجيه الإدخال
         System.setIn(new ByteArrayInputStream(simulatedInput.getBytes()));
 
-        // يجب إعادة تهيئة Scanner داخل loginLoop ليقرأ المدخل الجديد
+        // ملاحظة هامة: Scanner يتم إنشاؤه داخل الدالة، لذا سيلتقط الإدخال الجديد تلقائياً
         User user = loginService.loginLoop();
 
-        assertNotNull(user);
+        assertNotNull(user, "Should eventually login successfully");
         assertEquals("alice", user.getName());
     }
 
     @Test
-    @DisplayName("5. Test File Not Found (IOException Handling)")
-    void testFileNotFound() {
-        // نحذف الملف الوهمي عمداً
-        if (userFile.exists()) {
-            userFile.delete();
+    @DisplayName("5. Robustness: Parsing Bad Lines")
+    void testBadLinesInFile() throws IOException {
+        // إعادة كتابة الملف ببيانات مشوهة
+        try (FileWriter writer = new FileWriter(userFile)) {
+            writer.write("\n"); // Empty line
+            writer.write("short\n"); // Not enough parts
+            writer.write("badUser,pass,User,NotANumber\n"); // Invalid fine
         }
+        
+        // يجب أن يتجاهل الأسطر السيئة ويقرأ السطر الأخير (مع تصحيح الغرامة إلى 0.0)
+        User user = loginService.login("badUser", "pass");
+        assertNotNull(user);
+        assertEquals(0.0, user.getOutstandingFine());
+    }
+
+    @Test
+    @DisplayName("6. IO Exception Handling (File Missing)")
+    void testFileNotFound() {
+        // نحذف الملف لافتعال IOException
+        if (userFile.exists()) userFile.delete();
 
         User result = loginService.login("any", "any");
 
         assertNotNull(result);
         assertEquals("ERROR", result.getRole());
         assertTrue(result.getName().contains("Cannot read users file"));
+    }
+    
+    @Test
+    @DisplayName("7. Login Loop: Error Role Handling")
+    void testLoginLoopError() {
+        // نحذف الملف لافتعال خطأ القراءة
+        if (userFile.exists()) userFile.delete();
+        
+        // ندخل أي شيء ليحاول الدخول
+        String input = "any\nany\n";
+        System.setIn(new ByteArrayInputStream(input.getBytes()));
+        
+        // الدالة يجب أن ترجع null وتطبع رسالة الخطأ عندما يكون الدور ERROR
+        User result = loginService.loginLoop();
+        assertNull(result);
     }
 }

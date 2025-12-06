@@ -1,4 +1,5 @@
 package modeltest;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.lang.reflect.Field;
@@ -15,35 +16,39 @@ import model.User;
 class testborrowrecord {
 
     private BorrowRecord record;
-    // سنمرر null للكتاب والمستخدم لأن كودك الحالي لا يستخدم دوالهم الداخلية
-    // وهذا يسهل الاختبار دون الحاجة لكلاسات Book و User
+    // نستخدم null هنا لعدم تعقيد التست، المهم أن نختبر أن الـ Getter يرجع ما تم تمريره
     private Book book = null; 
     private User user = null;
 
     @BeforeEach
-    void setUp() throws Exception {
-        // يتم إنشاء سجل جديد قبل كل اختبار
+    void setUp() {
         record = new BorrowRecord(book, user);
     }
 
     @Test
-    @DisplayName("Test 1: Constructor sets correct initial dates")
-    void testConstructorDefaults() {
-        assertNotNull(record.getBorrowDate());
-        assertNotNull(record.getDueDate());
-        
-        // التأكد من أن تاريخ الإعارة هو اليوم
-        assertEquals(LocalDate.now(), record.getBorrowDate());
-        
-        // التأكد من أن تاريخ الاستحقاق بعد 28 يوم
-        assertEquals(LocalDate.now().plusDays(28), record.getDueDate());
-        
-        // التأكد من أن الكتاب غير مرجع
-        assertFalse(record.isReturned());
+    @DisplayName("1. Test Getters (Coverage for simple returns)")
+    void testAllGetters() {
+        // هذا الاختبار ضروري لتغطية أسطر: return book; return user;
+        assertAll("Verify all getters",
+            () -> assertEquals(book, record.getBook()),
+            () -> assertEquals(user, record.getUser()),
+            () -> assertNotNull(record.getBorrowDate()),
+            () -> assertNotNull(record.getDueDate())
+        );
     }
 
     @Test
-    @DisplayName("Test 2: setReturned updates status correctly")
+    @DisplayName("2. Test Constructor Defaults")
+    void testConstructorDefaults() {
+        assertAll("Constructor Logic",
+            () -> assertEquals(LocalDate.now(), record.getBorrowDate()),
+            () -> assertEquals(LocalDate.now().plusDays(28), record.getDueDate()),
+            () -> assertFalse(record.isReturned())
+        );
+    }
+
+    @Test
+    @DisplayName("3. Test Returned Status")
     void testSetReturned() {
         record.setReturned(true);
         assertTrue(record.isReturned());
@@ -53,72 +58,58 @@ class testborrowrecord {
     }
 
     @Test
-    @DisplayName("Test 3: isOverdue is false for new records")
-    void testIsOverdue_InitiallyFalse() {
-        // السجل الجديد تاريخ استحقاقه في المستقبل، لذا لا يجب أن يكون متأخراً
+    @DisplayName("4. Test isOverdue logic (Time Travel)")
+    void testIsOverdueLogic() throws Exception {
+        // حالة 1: الوضع الطبيعي (غير متأخر)
         assertFalse(record.isOverdue());
+
+        // حالة 2: تاريخ الاستحقاق هو اليوم (الحد الفاصل - لا يعتبر متأخراً)
+        modifyDueDate(record, LocalDate.now());
+        assertFalse(record.isOverdue(), "Should not be overdue if due date is today");
+
+        // حالة 3: متأخر بيوم واحد
+        modifyDueDate(record, LocalDate.now().minusDays(1));
+        assertTrue(record.isOverdue(), "Should be overdue if due date was yesterday");
+
+        // حالة 4: متأخر ولكن تم إرجاعه (يجب أن يكون false)
+        record.setReturned(true);
+        assertFalse(record.isOverdue(), "Should not be overdue if returned");
+    }
+
+    @Test
+    @DisplayName("5. Test getDaysOverdue calculations")
+    void testDaysOverdue() throws Exception {
+        // حالة A: الكتاب غير متأخر
+        // هذا يغطي السطر: if (!isOverdue()) return 0;
         assertEquals(0, record.getDaysOverdue());
-    }
 
-    @Test
-    @DisplayName("Test 4: isOverdue is TRUE when due date is in the past")
-    void testIsOverdue_True() throws Exception {
-        // خدعة الـ Reflection:
-        // سنقوم بتغيير تاريخ الاستحقاق يدوياً ليكون الأمس
-        LocalDate yesterday = LocalDate.now().minusDays(1);
-        modifyDueDate(record, yesterday);
-
-        // الآن يجب أن يكون الكتاب متأخراً
-        assertTrue(record.isOverdue(), "Should be overdue because due date was passed");
-    }
-
-    @Test
-    @DisplayName("Test 5: Days Overdue calculation is correct")
-    void testGetDaysOverdue() throws Exception {
-        // خدعة الـ Reflection:
-        // نضع تاريخ الاستحقاق قبل 10 أيام من الآن
-        LocalDate tenDaysAgo = LocalDate.now().minusDays(10);
-        modifyDueDate(record, tenDaysAgo);
-
+        // حالة B: الكتاب متأخر
+        // نغير التاريخ ليكون قبل 10 أيام
+        modifyDueDate(record, LocalDate.now().minusDays(10));
+        
+        // نتأكد أنه متأخر أولاً
         assertTrue(record.isOverdue());
-        // يجب أن يرجع 10 أيام
+        // نتأكد من حساب الأيام بشكل صحيح
         assertEquals(10, record.getDaysOverdue());
     }
 
     @Test
-    @DisplayName("Test 6: isOverdue is FALSE if returned, even if late")
-    void testIsOverdue_ReturnedButLate() throws Exception {
-        // نضع تاريخ الاستحقاق في الماضي (متأخر)
-        LocalDate pastDate = LocalDate.now().minusDays(5);
-        modifyDueDate(record, pastDate);
-
-        // لكن المستخدم أرجع الكتاب
-        record.setReturned(true);
-
-        // النتيجة: غير متأخر لأن الكتاب تم إرجاعه
-        assertFalse(record.isOverdue());
-    }
-
-    @Test
-    @DisplayName("Test 7: toString contains essential data")
+    @DisplayName("6. Test toString")
     void testToString() {
         String result = record.toString();
-        assertTrue(result.contains("borrowDate="));
-        assertTrue(result.contains("dueDate="));
-        assertTrue(result.contains("returned="));
+        assertAll("ToString Content",
+            () -> assertTrue(result.contains("borrowDate=")),
+            () -> assertTrue(result.contains("dueDate=")),
+            () -> assertTrue(result.contains("returned="))
+        );
     }
 
-    // -----------------------------------------------------------
-    // دالة مساعدة (Helper Method) لتعديل الحقول الـ private
-    // -----------------------------------------------------------
+    // ==========================================
+    // دالة مساعدة لتعديل التاريخ (Reflection)
+    // ==========================================
     private void modifyDueDate(BorrowRecord targetRecord, LocalDate newDate) throws Exception {
-        // الوصول لحقل dueDate داخل الكلاس
         Field field = BorrowRecord.class.getDeclaredField("dueDate");
-        
-        // السماح بتعديله (لأنه private)
         field.setAccessible(true);
-        
-        // وضع القيمة الجديدة
         field.set(targetRecord, newDate);
     }
 }

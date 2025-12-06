@@ -1,4 +1,5 @@
 package modeltest;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -17,43 +18,42 @@ class CDtest {
 
     @BeforeEach
     void setUp() {
-        // تهيئة البيانات قبل كل اختبار
+        // تهيئة كائن جديد قبل كل اختبار لضمان بيئة نظيفة
         cd = new CD("Thriller", "Michael Jackson", "111-222-333");
         user = new User("John", "password", "User");
     }
 
     @Test
-    @DisplayName("1. Test Constructor & Aliases")
-    void testConstructorAndAliases() {
-        // فحص البيانات الأساسية
+    @DisplayName("Test Constructor and Superclass Mapping")
+    void testConstructorAndMapping() {
+        // التحقق من القيم المباشرة
         assertEquals("Thriller", cd.getTitle());
         
-        // فحص دوال الـ Aliases الخاصة بالـ CD
-        assertEquals("Michael Jackson", cd.getArtist()); // يتأكد أن getArtist تستدعي getCreator
-        assertEquals("111-222-333", cd.getBarcode());  // يتأكد أن getBarcode تستدعي getId
-        
-        // التأكد من أن getCreator و getId الأصلية تعملان أيضاً
+        // التحقق من ربط الـ Artist بـ Creator
+        assertEquals("Michael Jackson", cd.getArtist());
         assertEquals("Michael Jackson", cd.getCreator());
+        
+        // التحقق من ربط الـ Barcode بـ ID
+        assertEquals("111-222-333", cd.getBarcode());
         assertEquals("111-222-333", cd.getId());
     }
 
     @Test
-    @DisplayName("2. Test CD Specific Configuration (Sprint 5 Requirements)")
-    void testCDConfiguration() {
-        // التأكد من مدة الإعارة الخاصة بالـ CD
-        assertEquals(7, cd.getLoanPeriod(), "Loan period for CD should be 7 days");
-        
-        // التأكد من الغرامة اليومية الخاصة بالـ CD
-        assertEquals(20.0, cd.getDailyFine(), "Daily fine for CD should be 20.0");
+    @DisplayName("Test CD Specific Constants (Loan Period & Daily Fine)")
+    void testCDConstants() {
+        // اختبار القواعد الخاصة بالسي دي (Sprint 5)
+        assertEquals(7, cd.getLoanPeriod(), "CD loan period must be 7 days");
+        assertEquals(20.0, cd.getDailyFine(), "CD daily fine must be 20.0");
     }
 
     @Test
-    @DisplayName("3. Test Inheritance logic (Setters/Getters from Media)")
-    void testInheritanceLogic() {
-        // بما أن CD يرث من media، يجب أن نتمكن من استخدام دوال media
+    @DisplayName("Test Inheritance Behavior (Borrowing)")
+    void testInheritanceBehavior() {
+        // التأكد من الحالة الافتراضية
         assertFalse(cd.isBorrowed());
-        
-        // تغيير الحالة يدوياً (لأن CD لا يملك دالة borrow خاصة به في الكود المرفق)
+        assertNull(cd.getBorrowedBy());
+
+        // تغيير الحالة واختبار الاستجابة
         cd.setBorrowed(true);
         cd.setBorrowedBy(user);
         
@@ -62,32 +62,49 @@ class CDtest {
     }
 
     @Test
-    @DisplayName("4. Test Fine Calculation Strategy")
-    void testFineCalculation() {
-        // 1. محاكاة أن الـ CD مستعار
+    @DisplayName("Test Fine Calculation: OVERDUE Case")
+    void testFineCalculationOverdue() {
         cd.setBorrowed(true);
-        
-        // 2. محاكاة أنه متأخر بـ 3 أيام
-        // (نضع تاريخ الاستحقاق قبل 3 أيام من اليوم)
-        LocalDate overdueDate = LocalDate.now().minusDays(3);
-        cd.setDueDate(overdueDate);
+        // جعل تاريخ الاستحقاق قبل 5 أيام من الآن
+        cd.setDueDate(LocalDate.now().minusDays(5));
 
-        // 3. التحقق من أن الـ CD يعتبر متأخراً
-        assertTrue(cd.isOverdue());
-
-        // 4. التحقق من الحسبة: 3 أيام * 20 شيكل = 60 شيكل
-        // (يعتمد هذا على أن CDFineStrategy تعمل بشكل صحيح وتضرب في 20)
-        double expectedFine = 3 * 20.0;
+        assertTrue(cd.isOverdue(), "Should be overdue");
         
-        assertEquals(expectedFine, cd.getFineAmount(), 0.01, "Fine should be calculated using CD strategy (20 * days)");
+        // الحسبة: 5 أيام * 20 شيكل = 100
+        assertEquals(100.0, cd.getFineAmount(), 0.001, "Fine should be 5 * 20 = 100");
+    }
+
+    @Test
+    @DisplayName("Test Fine Calculation: NOT OVERDUE (Future Date)")
+    void testFineCalculationNotOverdue() {
+        cd.setBorrowed(true);
+        // جعل تاريخ الاستحقاق غداً
+        cd.setDueDate(LocalDate.now().plusDays(1));
+
+        assertFalse(cd.isOverdue(), "Should not be overdue");
+        assertEquals(0.0, cd.getFineAmount(), "Fine should be 0 for future due date");
+    }
+
+    @Test
+    @DisplayName("Test Fine Calculation: NOT OVERDUE (Due Today)")
+    void testFineCalculationDueToday() {
+        cd.setBorrowed(true);
+        // تاريخ الاستحقاق هو اليوم
+        cd.setDueDate(LocalDate.now());
+
+        assertFalse(cd.isOverdue(), "Should not be overdue if returned on the due date");
+        assertEquals(0.0, cd.getFineAmount(), "Fine should be 0 if returned today");
     }
     
     @Test
-    @DisplayName("5. Test toString")
+    @DisplayName("Test toString Formatting")
     void testToString() {
-        String result = cd.toString();
-        assertTrue(result.contains("CD: Thriller"));
-        assertTrue(result.contains("Artist: Michael Jackson"));
-        assertTrue(result.contains("Barcode: 111-222-333"));
+        String output = cd.toString();
+        
+        assertNotNull(output);
+        // التحقق من وجود الكلمات المفتاحية والقيم
+        assertTrue(output.contains("CD: Thriller"));
+        assertTrue(output.contains("Artist: Michael Jackson"));
+        assertTrue(output.contains("Barcode: 111-222-333"));
     }
 }

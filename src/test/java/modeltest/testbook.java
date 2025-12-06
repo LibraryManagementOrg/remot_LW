@@ -1,5 +1,7 @@
 package modeltest;
+
 import static org.junit.jupiter.api.Assertions.*;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,117 +18,141 @@ class testbook {
 
     @BeforeEach
     void setUp() {
-        // تهيئة البيانات قبل كل اختبار
         user = new User("Alice", "password123", "User");
         book = new Book("Clean Code", "Robert C. Martin", "978-0132350884");
     }
 
+    // ============================================
+    // 1. اختبار الأساسيات والتوافق (Constructor & Getters)
+    // ============================================
     @Test
-    @DisplayName("1. Test Constructor & Inheritance (Media fields)")
-    void testConstructorAndInheritance() {
-        // التأكد من أن البيانات انتقلت للكلاس الأب (media) بشكل صحيح
-        assertEquals("Clean Code", book.getTitle());
-        assertEquals("Robert C. Martin", book.getCreator()); // في media اسمه creator
-        assertEquals("978-0132350884", book.getId());       // في media اسمه id
-        
-        // التأكد من القيم الافتراضية
-        assertFalse(book.isBorrowed());
-        assertNull(book.getDueDate());
-        assertNull(book.getBorrowedBy());
+    @DisplayName("Test Constructor and Backward Compatibility")
+    void testBasicProperties() {
+        assertAll("Basic Checks",
+            () -> assertEquals("Clean Code", book.getTitle()),
+            () -> assertEquals("Robert C. Martin", book.getCreator()),
+            () -> assertEquals("978-0132350884", book.getId()),
+            // اختبار دوال التوافق (Backward Compatibility)
+            () -> assertEquals("Robert C. Martin", book.getAuthor()),
+            () -> assertEquals("978-0132350884", book.getIsbn()),
+            // اختبار القيم الثابتة
+            () -> assertEquals(28, book.getLoanPeriod()),
+            () -> assertEquals(10.0, book.getDailyFine())
+        );
     }
 
+    // ============================================
+    // 2. اختبار الاستعارة (النجاح والفشل)
+    // ============================================
     @Test
-    @DisplayName("2. Test Abstract Methods Implementation")
-    void testAbstractMethods() {
-        // التأكد من أن Book نفذ الدوال المجردة بالشكل المطلوب
-        assertEquals(28, book.getLoanPeriod(), "Loan period for books should be 28 days");
-        assertTrue(book.getDailyFine() > 0, "Daily fine should be positive");
-    }
-
-    @Test
-    @DisplayName("3. Test Borrow Logic")
-    void testBorrowLogic() {
-        // تنفيذ الاستعارة
-        book.borrow(user);
-
-        // التحقق من تحديث حقول الـ media
-        assertTrue(book.isBorrowed());
-        assertEquals(user, book.getBorrowedBy());
-        
-        // التحقق من تاريخ الاستحقاق
-        LocalDate expectedDate = LocalDate.now().plusDays(28);
-        assertEquals(expectedDate, book.getDueDate());
-    }
-
-    @Test
-    @DisplayName("4. Test Return Logic")
-    void testReturnLogic() {
-        // ترتيب: استعارة الكتاب أولاً
+    @DisplayName("Test Borrowing Flow")
+    void testBorrowFlow() {
+        // الحالة 1: استعارة ناجحة
         book.borrow(user);
         
-        // فعل: إرجاع الكتاب
-        book.returnBook();
+        assertAll("Borrow Success",
+            () -> assertTrue(book.isBorrowed()),
+            () -> assertNotNull(book.getDueDate()),
+            () -> assertEquals(user, book.getBorrowedBy())
+        );
 
-        // تحقق: تصفير البيانات
-        assertFalse(book.isBorrowed());
-        assertNull(book.getDueDate());
-        assertNull(book.getBorrowedBy());
-        assertFalse(book.isFineIssued());
+        // الحالة 2: محاولة استعارة كتاب مستعار بالفعل (لرفع الكفرج في جملة if)
+        Exception exception = assertThrows(IllegalStateException.class, () -> {
+            book.borrow(new User("Bob", "pass", "User"));
+        });
+        assertEquals("Book is already borrowed!", exception.getMessage());
     }
 
+    // ============================================
+    // 3. اختبار الإرجاع
+    // ============================================
     @Test
-    @DisplayName("5. Test Overdue and Fine Calculation")
-    void testFineCalculation() {
-        // 1. استعارة الكتاب
+    @DisplayName("Test Return Logic")
+    void testReturn() {
         book.borrow(user);
-        
-        // 2. تلاعب بالتاريخ (نجعل تاريخ الاستحقاق قبل 5 أيام من اليوم)
-        LocalDate pastDate = LocalDate.now().minusDays(5);
-        book.setDueDate(pastDate);
+        book.returnBook(); // Action
 
-        // 3. التحقق من أن الكتاب يعتبر متأخراً
-        assertTrue(book.isOverdue(), "Book should be overdue");
-
-        // 4. التحقق من حساب الغرامة (5 أيام * الغرامة اليومية)
-        double expectedFine = 5 * book.getDailyFine();
-        assertEquals(expectedFine, book.getFineAmount(), 0.01, "Fine calculation should be correct");
+        assertAll("Return Checks",
+            () -> assertFalse(book.isBorrowed()),
+            () -> assertNull(book.getDueDate()),
+            () -> assertNull(book.getBorrowedBy()),
+            () -> assertFalse(book.isFineIssued())
+        );
     }
-    
+
+    // ============================================
+    // 4. اختبار الغرامات والـ ToString
+    // ============================================
     @Test
-    @DisplayName("6. Test Fine Amount is Zero if Not Overdue")
-    void testFineZeroIfNotOverdue() {
-        book.borrow(user);
-        // تاريخ الاستحقاق في المستقبل (الوضع الطبيعي)
-        assertFalse(book.isOverdue());
+    @DisplayName("Test Fine Amount and ToString")
+    void testFineAndString() {
+        // اختبار الغرامة الصفرية
         assertEquals(0.0, book.getFineAmount());
+
+        // اختبار الغرامة عند التأخير
+        book.borrow(user);
+        book.setDueDate(LocalDate.now().minusDays(5)); // تأخير 5 أيام
+        assertEquals(50.0, book.getFineAmount(), 0.01); // 5 * 10.0
+
+        // اختبار toString
+        String str = book.toString();
+        assertTrue(str.contains("Clean Code"));
+        assertTrue(str.contains("Robert C. Martin"));
     }
 
+    // ============================================
+    // 5. اختبار toFileString (تغطية الـ Ternary Operators)
+    // ============================================
     @Test
-    @DisplayName("7. Test File String Generation (toFileString)")
+    @DisplayName("Test toFileString scenarios")
     void testToFileString() {
-        // تنسيق الكتاب المتوقع عند الحفظ
-        String result = book.toFileString();
-        
-        assertTrue(result.startsWith("BOOK;"), "Should start with BOOK tag");
-        assertTrue(result.contains("Clean Code"), "Should contain title");
-        assertTrue(result.contains("false"), "Should contain isBorrowed status");
+        // السيناريو A: كتاب غير مستعار (يجب أن يطبع "null" للتواريخ واليوزر)
+        String availableStr = book.toFileString();
+        assertTrue(availableStr.contains("null;null"), "Should contain nulls for empty fields");
+
+        // السيناريو B: كتاب مستعار (يجب أن يطبع القيم الحقيقية)
+        book.borrow(user);
+        String borrowedStr = book.toFileString();
+        assertFalse(borrowedStr.contains("null"), "Should NOT contain nulls for borrowed book");
+        assertTrue(borrowedStr.contains(user.getName()));
     }
 
+    // ============================================
+    // 6. اختبار fromFileString (أهم جزء للكفرج العالي)
+    // ============================================
     @Test
-    @DisplayName("8. Test Parsing from File (fromFileString)")
+    @DisplayName("Test fromFileString with all branches")
     void testFromFileString() {
-        // محاكاة سطر من ملف books.txt
-        String line = "BOOK;Design Patterns;GoF;12345;true;2023-01-01;Bob;true";
-        
-        Book parsedBook = Book.fromFileString(line);
+        // 1. اختبار القيم الفارغة (Null/Empty guards)
+        assertNull(Book.fromFileString(null));
+        assertNull(Book.fromFileString(""));
+        assertNull(Book.fromFileString("   "));
 
-        assertNotNull(parsedBook);
-        assertEquals("Design Patterns", parsedBook.getTitle());
-        assertEquals("GoF", parsedBook.getCreator());
-        assertEquals("12345", parsedBook.getId());
-        assertTrue(parsedBook.isBorrowed());
-        // في دالة fromFileString يتم تعيين الغرامة إذا كانت true في الملف
-        assertTrue(parsedBook.isFineIssued()); 
-        assertEquals("Bob", parsedBook.getBorrowedBy().getName());
+        // 2. اختبار السلسلة القصيرة (Validation check)
+        assertNull(Book.fromFileString("BOOK;Short")); 
+
+        // 3. اختبار مع كلمة BOOK (Offset = 1)
+        String standardLine = "BOOK;Title;Author;ISBN;true;2023-01-01;User;true";
+        Book b1 = Book.fromFileString(standardLine);
+        assertNotNull(b1);
+        assertEquals("Title", b1.getTitle());
+        assertTrue(b1.isBorrowed());
+        assertTrue(b1.isFineIssued());
+
+        // 4. اختبار بدون كلمة BOOK (Offset = 0) - هذا يغطي الـ else في الكود
+        String noTagLine = "Title2;Author2;ISBN2;false;null;null;false";
+        Book b2 = Book.fromFileString(noTagLine);
+        assertNotNull(b2);
+        assertEquals("Title2", b2.getTitle());
+        assertFalse(b2.isBorrowed());
+
+        // 5. اختبار الـ Parsing للقيم "null" (تغطية شروط if inside parsing)
+        // هذا السطر يختبر الفروع التي تتجاهل الـ parsing إذا كانت القيمة "null"
+        String nullsLine = "BOOK;T;A;I;true;null;null;false";
+        Book b3 = Book.fromFileString(nullsLine);
+        assertNotNull(b3);
+        assertTrue(b3.isBorrowed()); 
+        assertNull(b3.getDueDate()); // تأكدنا أنه لم يحاول عمل parse لـ "null"
+        assertNull(b3.getBorrowedBy());
     }
 }

@@ -8,10 +8,15 @@ import service.AdminService;
 import service.BookService;
 import service.UserService;
 
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 
 import java.io.*;
 import java.time.LocalDate;
+import java.util.Collections;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -19,232 +24,255 @@ class BookServiceTest {
 
     private BookService bookService;
     private AdminService stubAdminService;
-    private AdminService stubAdminNotLogged;
     private UserService stubUserService;
-    private User regularUser;
-    private User secondUser;
-
-    private final String TEST_FILE_PATH = "src/main/resources/books_test.txt";
+    
+    private final String TEST_FILE = "src/main/resources/books_test.txt";
+    private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
+    private final PrintStream originalOut = System.out;
     private final InputStream originalIn = System.in;
 
     @BeforeEach
-    void setUp() {
-        regularUser = new User("John", "123", "User");
-        secondUser = new User("Mike", "555", "User");
+    void setUp() throws IOException {
+        // 1. إنشاء ملف وهمي فارغ
+        createDummyFile();
+        
+        // 2. توجيه المخرجات
+        System.setOut(new PrintStream(outContent));
 
-        // Admin logged in
+        // 3. إنشاء خدمات وهمية (Stubs) للتحكم في سلوك الاختبار
+        
+        // AdminService: دائماً logged in
         stubAdminService = new AdminService() {
             @Override
             public boolean isLoggedIn() { return true; }
         };
 
-        // Admin NOT logged in
-        stubAdminNotLogged = new AdminService() {
-            @Override
-            public boolean isLoggedIn() { return false; }
-        };
-
-        // User service stub
-        stubUserService = new UserService() {
+        // UserService: يرجع مستخدمين وهميين عند الطلب
+        stubUserService = new UserService("dummy_users.txt") {
             @Override
             public User findUserByName(String name) {
-                if (name.equals("John")) return regularUser;
-                if (name.equals("Mike")) return secondUser;
-                return null;
+                if ("BlockedUser".equals(name)) {
+                    User u = new User("BlockedUser", "pass", "User");
+                    u.setOutstandingFine(50.0);
+                    return u;
+                }
+                return new User(name, "pass", "User");
             }
         };
 
-        bookService = new BookService(stubAdminService, stubUserService, TEST_FILE_PATH);
-        bookService.getAllBooks().clear();
+        // 4. تهيئة الخدمة المراد اختبارها
+        bookService = new BookService(stubAdminService, stubUserService, TEST_FILE);
     }
 
     @AfterEach
     void tearDown() {
+        System.setOut(originalOut);
         System.setIn(originalIn);
-        File f = new File(TEST_FILE_PATH);
+        File f = new File(TEST_FILE);
         if (f.exists()) f.delete();
     }
 
-    // ---------------------------------------------------------
-    // 1. ADD BOOK – Admin allowed
-    // ---------------------------------------------------------
-    @Test
-    void testAddBook_AdminAllowed() {
-        bookService.addBook("Java", "Author", "AAA");
-        assertNotNull(bookService.findMediaById("AAA"));
+    private void createDummyFile() throws IOException {
+        try (PrintWriter pw = new PrintWriter(new FileWriter(TEST_FILE))) {
+            // إضافة كتاب و CD بشكل افتراضي للاختبار
+            pw.println("BOOK;Java Book;Author A;111;false;null;null;false");
+            pw.println("CD;Music CD;Artist B;222;false;null;null;false");
+        }
     }
 
-    // ---------------------------------------------------------
-    // 2. ADD BOOK – Admin NOT logged in
-    // ---------------------------------------------------------
+    // =========================================================
+    // 1. Load & Save Logic
+    // =========================================================
     @Test
-    void testAddBook_AdminDenied() {
-        BookService bs = new BookService(stubAdminNotLogged, stubUserService, TEST_FILE_PATH);
-        bs.getAllBooks().clear();
-        bs.addBook("Fail", "Auth", "X1");
-
-        assertNull(bs.findMediaById("X1"));  // لم يتم الإضافة
+    @DisplayName("Load Items: Books and CDs loaded correctly")
+    void testLoadItems() {
+        List<media> items = bookService.getAllBooks();
+        assertEquals(2, items.size());
+        
+        assertTrue(items.get(0) instanceof Book);
+        assertEquals("Java Book", items.get(0).getTitle());
+        
+        assertTrue(items.get(1) instanceof CD);
+        assertEquals("Music CD", items.get(1).getTitle());
     }
 
-    // ---------------------------------------------------------
-    // 3. UNIQUE ID check
-    // ---------------------------------------------------------
+    // =========================================================
+    // 2. Add Item Logic
+    // =========================================================
     @Test
-    void testAddDuplicateID() {
-        bookService.addBook("A1", "Auth", "ID1");
-        bookService.addBook("A2", "Auth", "ID1");
-
-        assertEquals(1, bookService.getAllBooks().size());
+    @DisplayName("Add Book: Success")
+    void testAddBookSuccess() {
+        bookService.addBook("New Book", "New Auth", "333");
+        assertNotNull(bookService.findMediaById("333"));
+        assertTrue(outContent.toString().contains("Book added successfully"));
     }
 
-    // ---------------------------------------------------------
-    // 4. ADD CD
-    // ---------------------------------------------------------
     @Test
-    void testAddCD() {
-        bookService.addCD("Thriller", "MJ", "C100");
-        assertTrue(bookService.findMediaById("C100") instanceof CD);
+    @DisplayName("Add CD: Success")
+    void testAddCDSuccess() {
+        bookService.addCD("New CD", "New Artist", "444");
+        assertNotNull(bookService.findMediaById("444"));
+        assertTrue(outContent.toString().contains("CD added successfully"));
     }
 
-    // ---------------------------------------------------------
-    // 5. BORROW – success
-    // ---------------------------------------------------------
     @Test
+    @DisplayName("Add Item: Fail (Duplicate ID)")
+    void testAddDuplicate() {
+        bookService.addBook("Dup", "Auth", "111"); // 111 exists
+        assertTrue(outContent.toString().contains("already exists"));
+    }
+    
+    @Test
+    @DisplayName("Add Item: Fail (Not Admin)")
+    void testAddNotAdmin() {
+        // نغير الـ Stub ليرجع false
+        AdminService notLoggedIn = new AdminService() {
+            @Override
+            public boolean isLoggedIn() { return false; }
+        };
+        BookService limitedService = new BookService(notLoggedIn, stubUserService, TEST_FILE);
+        
+        limitedService.addBook("Fail", "Fail", "999");
+        assertTrue(outContent.toString().contains("Access denied"));
+    }
+
+    // =========================================================
+    // 3. Search Logic
+    // =========================================================
+    @Test
+    @DisplayName("Search: Found and Not Found")
+    void testSearch() {
+        // بحث ناجح
+        bookService.searchBook("Java");
+        assertTrue(outContent.toString().contains("Search results"));
+        
+        // بحث فاشل
+        bookService.searchBook("Python");
+        assertTrue(outContent.toString().contains("No items found"));
+    }
+
+    // =========================================================
+    // 4. Borrow Logic
+    // =========================================================
+    @Test
+    @DisplayName("Borrow: Success")
     void testBorrowSuccess() {
-        bookService.addBook("B", "A", "123");
-        boolean ok = bookService.borrowBook(regularUser, "123");
-
-        assertTrue(ok);
-        assertTrue(bookService.findMediaById("123").isBorrowed());
+        User u = new User("John", "pass", "User");
+        boolean result = bookService.borrowBook(u, "111"); // الكتاب المتاح
+        
+        assertTrue(result);
+        media item = bookService.findMediaById("111");
+        assertTrue(item.isBorrowed());
+        assertEquals("John", item.getBorrowedBy().getName());
     }
 
-    // ---------------------------------------------------------
-    // 6. BORROW – user has fines
-    // ---------------------------------------------------------
     @Test
-    void testBorrowFailsDueToFine() {
-        bookService.addBook("B", "A", "F1");
-        regularUser.setOutstandingFine(20);
-
-        boolean ok = bookService.borrowBook(regularUser, "F1");
-        assertFalse(ok);
+    @DisplayName("Borrow: Fail (User has Fines)")
+    void testBorrowFailFine() {
+        User blocked = new User("BlockedUser", "pass", "User");
+        boolean result = bookService.borrowBook(blocked, "111");
+        
+        assertFalse(result);
+        assertTrue(outContent.toString().contains("cannot borrow new items until you pay"));
     }
 
-    // ---------------------------------------------------------
-    // 7. BORROW – item not found
-    // ---------------------------------------------------------
     @Test
-    void testBorrowItemNotFound() {
-        boolean ok = bookService.borrowBook(regularUser, "XXX");
-        assertFalse(ok);
+    @DisplayName("Borrow: Fail (Already Borrowed)")
+    void testBorrowFailAlreadyBorrowed() {
+        User u = new User("John", "pass", "User");
+        bookService.borrowBook(u, "111"); // Borrow first time
+        
+        boolean result = bookService.borrowBook(u, "111"); // Try again
+        assertFalse(result);
+        assertTrue(outContent.toString().contains("already borrowed"));
+    }
+    
+    @Test
+    @DisplayName("Borrow: Fail (Item Not Found)")
+    void testBorrowNotFound() {
+        User u = new User("John", "pass", "User");
+        boolean result = bookService.borrowBook(u, "999");
+        assertFalse(result);
     }
 
-    // ---------------------------------------------------------
-    // 8. BORROW – item already borrowed
-    // ---------------------------------------------------------
+    // =========================================================
+    // 5. Return Logic (The Complex Part)
+    // =========================================================
     @Test
-    void testBorrowAlreadyBorrowed() {
-        bookService.addBook("B", "A", "BB1");
-        bookService.borrowBook(regularUser, "BB1");
-
-        boolean ok = bookService.borrowBook(regularUser, "BB1");
-        assertFalse(ok);
-    }
-
-    // ---------------------------------------------------------
-    // 9. RETURN – normal successful return
-    // ---------------------------------------------------------
-    @Test
+    @DisplayName("Return: Normal Return (No Fines)")
     void testReturnNormal() {
-        bookService.addBook("R", "A", "R1");
-        bookService.borrowBook(regularUser, "R1");
-
-        bookService.returnBook("R1", regularUser);
-
-        assertFalse(bookService.findMediaById("R1").isBorrowed());
+        User u = new User("John", "pass", "User");
+        bookService.borrowBook(u, "111");
+        
+        bookService.returnBook("111", u);
+        
+        media item = bookService.findMediaById("111");
+        assertFalse(item.isBorrowed());
+        assertTrue(outContent.toString().contains("Item returned successfully"));
     }
 
-    // ---------------------------------------------------------
-    // 10. RETURN – item NOT found
-    // ---------------------------------------------------------
     @Test
-    void testReturnItemNotFound() {
-        bookService.returnBook("MISSING", regularUser);
-        // Nothing to assert except no crash
-    }
+    @DisplayName("Return: Overdue Item - Pay Now (Yes)")
+    void testReturnOverduePayYes() {
+        User u = new User("John", "pass", "User");
+        bookService.borrowBook(u, "111");
+        
+        // جعل الكتاب متأخراً 5 أيام
+        bookService.makeBookOverdue("111", 5);
 
-    // ---------------------------------------------------------
-    // 11. RETURN – item NOT borrowed
-    // ---------------------------------------------------------
-    @Test
-    void testReturnNotBorrowed() {
-        bookService.addBook("X", "Y", "NB1");
-        bookService.returnBook("NB1", regularUser);
-        assertFalse(bookService.findMediaById("NB1").isBorrowed());
-    }
-
-    // ---------------------------------------------------------
-    // 12. RETURN – item borrowed by ANOTHER user
-    // ---------------------------------------------------------
-    @Test
-    void testReturnBorrowedByAnotherUser() {
-        bookService.addBook("Z", "T", "DIFF");
-        bookService.borrowBook(regularUser, "DIFF");
-
-        bookService.returnBook("DIFF", secondUser);
-
-        assertTrue(bookService.findMediaById("DIFF").isBorrowed());
-    }
-
-    // ---------------------------------------------------------
-    // 13. RETURN – Overdue + Pay YES
-    // ---------------------------------------------------------
-    @Test
-    void testReturnOverdue_PayYes() {
-        bookService.addBook("Late", "A", "OV1");
-        bookService.borrowBook(regularUser, "OV1");
-        bookService.makeBookOverdue("OV1", 4);
-
+        // محاكاة إدخال "yes" للدفع
         System.setIn(new ByteArrayInputStream("yes\n".getBytes()));
 
-        bookService.returnBook("OV1", regularUser);
+        bookService.returnBook("111", u);
 
-        assertFalse(bookService.findMediaById("OV1").isBorrowed());
+        media item = bookService.findMediaById("111");
+        assertFalse(item.isBorrowed());
+        assertTrue(outContent.toString().contains("Payment Successful"));
     }
 
-    // ---------------------------------------------------------
-    // 14. RETURN – Overdue + Pay NO
-    // ---------------------------------------------------------
     @Test
-    void testReturnOverdue_PayNo() {
-        bookService.addBook("Late2", "A", "OV2");
-        bookService.borrowBook(regularUser, "OV2");
-        bookService.makeBookOverdue("OV2", 5);
+    @DisplayName("Return: Overdue Item - Pay Now (No)")
+    void testReturnOverduePayNo() {
+        User u = new User("John", "pass", "User");
+        bookService.borrowBook(u, "111");
+        bookService.makeBookOverdue("111", 5);
 
+        // محاكاة إدخال "no" لرفض الدفع
         System.setIn(new ByteArrayInputStream("no\n".getBytes()));
 
-        bookService.returnBook("OV2", regularUser);
+        bookService.returnBook("111", u);
 
-        assertTrue(bookService.findMediaById("OV2").isBorrowed());
+        media item = bookService.findMediaById("111");
+        assertTrue(item.isBorrowed()); // لا يزال مستعاراً
+        assertTrue(outContent.toString().contains("Return cancelled"));
     }
 
-    // ---------------------------------------------------------
-    // 15. Search simple test
-    // ---------------------------------------------------------
     @Test
-    void testSearch() {
-        bookService.addBook("Java Basics", "Auth", "JB1");
-        assertNotNull(bookService.findMediaById("JB1"));
+    @DisplayName("Return: Fail Scenarios")
+    void testReturnFails() {
+        User u = new User("John", "pass", "User");
+        User other = new User("Other", "pass", "User");
+
+        // 1. Item not found
+        bookService.returnBook("999", u);
+        assertTrue(outContent.toString().contains("Item not found"));
+
+        // 2. Not borrowed
+        bookService.returnBook("222", u); // CD is available
+        assertTrue(outContent.toString().contains("already returned"));
+
+        // 3. Wrong user
+        bookService.borrowBook(u, "111");
+        bookService.returnBook("111", other); // Other tries to return John's book
+        assertTrue(outContent.toString().contains("cannot return an item borrowed by another user"));
     }
-
-    // ---------------------------------------------------------
-    // 16. makeBookOverdue – item not borrowed
-    // ---------------------------------------------------------
+    
+    // =========================================================
+    // 6. Test makeBookOverdue (Helper)
+    // =========================================================
     @Test
-    void testMakeBookOverdue_notBorrowed() {
-        bookService.addBook("No borrow", "A", "NOB");
-        bookService.makeBookOverdue("NOB", 3);
-
-        assertNull(bookService.findMediaById("NOB").getDueDate());
+    void testMakeOverdueHelper() {
+        bookService.makeBookOverdue("999", 5); // Not found
+        assertTrue(outContent.toString().contains("Item not found"));
     }
 }
