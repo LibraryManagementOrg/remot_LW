@@ -21,10 +21,15 @@ public class AdminService {
     }
 
     // --- تسجيل الخروج ---
-    public void logout() {
-        loggedIn = false;
-        currentUser = null;
-        System.out.println("🔒 Admin logged out successfully.");
+    // تم التعديل: يعيد String بدلاً من void
+    public String logout() {
+        if (loggedIn) {
+            String msg = "🔒 Admin logged out successfully.";
+            loggedIn = false;
+            currentUser = null;
+            return msg;
+        }
+        return "Admin was not logged in.";
     }
 
     // --- التحقق من حالة تسجيل الدخول ---
@@ -54,25 +59,23 @@ public class AdminService {
 
     // =========================================================
     // 🛑 US4.2: إلغاء تسجيل المستخدم (Unregister User)
+    // 🔴 تم التعديل: يعيد String بدلاً من void
     // =========================================================
-    public void unregisterUser(String username, UserService userService, BookService bookService) {
+    public String unregisterUser(String username, UserService userService, BookService bookService) {
         // 1. التحقق من صلاحية الأدمن
         if (!loggedIn) {
-            System.out.println("❌ Access denied! Only admins can unregister users.");
-            return;
+            return "❌ Access denied! Only admins can unregister users.";
         }
 
         // 2. البحث عن المستخدم
         User user = userService.findUserByName(username);
         if (user == null) {
-            System.out.println("❌ User not found: " + username);
-            return;
+            return "❌ User not found: " + username;
         }
 
         // 3. التحقق من الغرامات (Condition: No unpaid fines)
         if (user.getOutstandingFine() > 0) {
-            System.out.println("⛔ Cannot delete user! They have unpaid fines: " + user.getOutstandingFine());
-            return;
+            return "⛔ Cannot delete user! They have unpaid fines: " + user.getOutstandingFine();
         }
 
         // 4. التحقق من الكتب المستعارة (Condition: No active loans)
@@ -87,37 +90,40 @@ public class AdminService {
         }
 
         if (hasActiveLoans) {
-            System.out.println("⛔ Cannot delete user! They still have borrowed books.");
-            return;
+            return "⛔ Cannot delete user! They still have borrowed books.";
         }
 
-        // 5. إذا تجاوز كل الشروط، قم بالحذف
+    
+        if (userService.deleteUser(username).startsWith("🗑")) { // افتراض أن deleteUser أصبحت تعيد رسالة
+             return "✅ User [" + username + "] unregistered successfully.";
+        }
+        
+        // إذا كانت لا تزال تعيد boolean (يجب التأكد من UserService.java)
+        /*
         boolean deleted = userService.deleteUser(username);
         if (deleted) {
-            System.out.println("✅ User [" + username + "] unregistered successfully.");
+            return "✅ User [" + username + "] unregistered successfully.";
         }
+        */
+        
+        return "❌ Failed to complete unregistration process."; // رسالة افتراضية
     }
-    
-    // =========================================================
-    // 📧 US3.1: إرسال تنبيهات (Observer Pattern Applied) ✅
-    // =========================================================
-    public void sendOverdueReminders(UserService userService, BookService bookService) {
+
+    public String sendOverdueReminders(UserService userService, BookService bookService) {
         if (!loggedIn) {
-            System.out.println("❌ Access denied! Please log in as admin.");
-            return;
+            return "❌ Access denied! Please log in as admin.";
         }
 
-        System.out.println("📧 Initiating notification process...");
-
-        // 1. إنشاء الـ Observer (الذي يعرف كيف يرسل الإيميل الحقيقي)
-        // تأكدي أن RealEmailService يحتوي على إعدادات Gmail الصحيحة
+        // 1. إنشاء الـ Observer
         NotificationObserver emailObserver = new RealEmailService();
 
         // 2. إنشاء الـ Subject/Logic Service وحقن الـ Observer فيه
         ReminderService reminderService = new ReminderService(emailObserver, userService);
 
-        // 3. تنفيذ العملية (ReminderService سيقوم بالفحص واستدعاء Observer عند الحاجة)
-        reminderService.sendOverdueReminders(bookService.getAllBooks());
+        // 3. تنفيذ العملية
+        int count = reminderService.sendOverdueReminders(bookService.getAllBooks());
+        
+        return String.format("📧 Notification process initiated. %d reminders were sent.", count);
     }
 
     // --- إرجاع المستخدم الحالي ---

@@ -19,47 +19,33 @@ public class BookService {
     private AdminService adminService;
     private UserService userService;
     
-    // ✅ جعلنا المسار متغيراً وليس final ليمكن تغييره في الاختبارات
     private String filePath = "src/main/resources/books.txt"; 
 
-    // =============================================================
-    // 1️⃣ الكونستركتور الافتراضي (للبرنامج الرئيسي)
-    // =============================================================
     public BookService(AdminService adminService, UserService userService) {
         this.adminService = adminService;
         this.userService = userService;
-        // يستخدم المسار الافتراضي (books.txt)
         loadItemsFromFile();
     }
 
-    // =============================================================
-    // 2️⃣ كونستركتور مخصص للاختبارات (Test Constructor)
-    // ✅ يسمح بتمرير مسار ملف وهمي لكي لا نعدل الملف الأصلي
-    // =============================================================
     public BookService(AdminService adminService, UserService userService, String testFilePath) {
         this.adminService = adminService;
         this.userService = userService;
-        this.filePath = testFilePath; // استخدام الملف الوهمي
+        this.filePath = testFilePath;
         loadItemsFromFile();
     }
 
-    // =============================
-    //      تحميل الوسائط من الملف
-    // =============================
     private void loadItemsFromFile() {
-        File file = new File(this.filePath); // ✅ استخدام المتغير
+        File file = new File(this.filePath);
         if (!file.exists()) {
-            // لا نطبع رسالة خطأ هنا لأن إنشاء ملف جديد أمر طبيعي في البداية
             return;
         }
 
-        try (BufferedReader br = new BufferedReader(new FileReader(this.filePath))) { // ✅ استخدام المتغير
+        try (BufferedReader br = new BufferedReader(new FileReader(this.filePath))) {
             String line;
             while ((line = br.readLine()) != null) {
                 if (line.trim().isEmpty()) continue;
                 
                 String[] parts = line.split(";", -1);
-                // التنسيق: TYPE;Title;Creator;ID;IsBorrowed;DueDate;User;FineIssued
                 if (parts.length < 4) continue;
 
                 String type = parts[0];
@@ -95,11 +81,8 @@ public class BookService {
         }
     }
 
-    // =============================
-    //        حفظ الوسائط للملف
-    // =============================
     public void saveBooksToFile() { 
-        try (PrintWriter pw = new PrintWriter(new FileWriter(this.filePath))) { // ✅ استخدام المتغير
+        try (PrintWriter pw = new PrintWriter(new FileWriter(this.filePath))) {
             for (media m : items) {
                 String type = (m instanceof CD) ? "CD" : "BOOK";
                 String user = (m.getBorrowedBy() != null) ? m.getBorrowedBy().getName() : "null";
@@ -119,49 +102,36 @@ public class BookService {
         }
     }
 
-    // =============================
-    //           إضافة كتاب
-    // =============================
-    public void addBook(String title, String author, String isbn) {
+    // 🔴 تم التعديل: يعيد String
+    public String addBook(String title, String author, String isbn) {
         if (!adminService.isLoggedIn()) {
-            System.out.println("❌ Access denied. Admin login required.");
-            return;
+            return "❌ Access denied. Admin login required.";
         }
 
-        // ✅ التحقق من الرقم الفريد
         if (findMediaById(isbn) != null) {
-            System.out.println("⛔ Error: A media item with ID (ISBN) [" + isbn + "] already exists!");
-            return;
+            return "⛔ Error: A media item with ID (ISBN) [" + isbn + "] already exists!";
         }
 
         items.add(new Book(title, author, isbn));
         saveBooksToFile();
-        System.out.println("📗 Book added successfully!");
+        return "📗 Book added successfully!";
     }
 
-    // =============================
-    //        إضافة CD
-    // =============================
-    public void addCD(String title, String artist, String barcode) {
+    // 🔴 تم التعديل: يعيد String
+    public String addCD(String title, String artist, String barcode) {
         if (!adminService.isLoggedIn()) {
-            System.out.println("❌ Access denied. Admin login required.");
-            return;
+            return "❌ Access denied. Admin login required.";
         }
 
-        // ✅ التحقق من الرقم الفريد
         if (findMediaById(barcode) != null) {
-            System.out.println("⛔ Error: A media item with ID (Barcode) [" + barcode + "] already exists!");
-            return;
+            return "⛔ Error: A media item with ID (Barcode) [" + barcode + "] already exists!";
         }
 
         items.add(new CD(title, artist, barcode));
         saveBooksToFile();
-        System.out.println("💿 CD added successfully!");
+        return "💿 CD added successfully!";
     }
 
-    // =============================
-    //         البحث
-    // =============================
     public void searchBook(String keyword) {
         List<media> results = new ArrayList<>();
 
@@ -183,27 +153,21 @@ public class BookService {
         }
     }
 
-    // =============================
-    //        استعارة
-    // =============================
-    public boolean borrowBook(User user, String id) {
+    // 🔴 تم التعديل: يعيد String (بدلاً من boolean)
+    public String borrowBook(User user, String id) {
         User realUser = userService.findUserByName(user.getName());
 
-        // ✅ منع الاستعارة في حال وجود غرامات
         if (realUser.getOutstandingFine() > 0) { 
-            System.out.println("❌ You cannot borrow new items until you pay your fines.");
-            return false;
+            return "❌ You cannot borrow new items until you pay your fines.";
         }
 
         media item = findMediaById(id);
         if (item == null) {
-            System.out.println("❌ Item not found.");
-            return false;
+            return "❌ Item not found.";
         }
 
         if (item.isBorrowed()) {
-            System.out.println("❌ Item is already borrowed.");
-            return false;
+            return "❌ Item is already borrowed.";
         }
 
         item.setBorrowed(true);
@@ -213,58 +177,38 @@ public class BookService {
 
         saveBooksToFile();
 
-        System.out.println("✅ Borrowed: " + item.getTitle());
-        System.out.println("📅 Due Date: " + item.getDueDate() + " (Loan Period: " + item.getLoanPeriod() + " days)");
-        return true;
+        return String.format("✅ Borrowed: %s | 📅 Due Date: %s (Loan Period: %d days)", 
+                             item.getTitle(), item.getDueDate(), item.getLoanPeriod());
     }
 
-    // =============================
-    //         إرجاع (مع الدفع الفوري)
-    // =============================
-    public void returnBook(String id, User user) {
+    // 🔴 تم التعديل: يعيد String (بدلاً من void)
+    public String returnBook(String id, User user) {
         media item = findMediaById(id);
 
         if (item == null) {
-            System.out.println("❌ Item not found.");
-            return;
+            return "❌ Item not found.";
         }
 
         if (!item.isBorrowed()) {
-            System.out.println("⚠ Item already returned.");
-            return;
+            return "⚠ Item already returned.";
         }
 
         if (item.getBorrowedBy() == null ||
             !item.getBorrowedBy().getName().equalsIgnoreCase(user.getName())) {
-            System.out.println("❌ You cannot return an item borrowed by another user.");
-            return;
+            return "❌ You cannot return an item borrowed by another user.";
         }
 
         // --- التحقق من التأخير وحساب الغرامة ---
-        double fineAmount = 0.0;
         if (item.getDueDate() != null && LocalDate.now().isAfter(item.getDueDate())) {
             long daysOverdue = ChronoUnit.DAYS.between(item.getDueDate(), LocalDate.now());
             
-            // حساب الغرامة (2 للكتاب، 5 للسي دي)
+            // حساب الغرامة
             double dailyFine = (item instanceof Book) ? 2.0 : 5.0; 
-            fineAmount = daysOverdue * dailyFine;
+            double fineAmount = daysOverdue * dailyFine;
 
-            System.out.println("⚠ ALERT: This item is OVERDUE by " + daysOverdue + " days.");
-            System.out.println("💲 Total Fine required to return: $" + fineAmount);
-            System.out.println("🛑 You cannot return this item without paying the fine.");
-            
-            System.out.print("Do you want to pay now and return the item? (yes/no): ");
-            Scanner scanner = new Scanner(System.in); 
-            String choice = scanner.next();
-
-            if (!choice.equalsIgnoreCase("yes")) {
-                System.out.println("❌ Return cancelled. You must pay to return the item.");
-                return; // 🛑 إيقاف العملية
-            }
-
-            System.out.println("💸 Processing payment of $" + fineAmount + "...");
-            System.out.println("✅ Payment Successful!");
-            // لا نضيف الغرامة لحساب المستخدم لأنه دفعها فوراً
+            // تم إزالة Scanner والطباعة هنا، ونعيد رسالة للـ mymain للتعامل معها
+            return String.format("⚠ OVERDUE: This item is late by %d days. Total Fine: $%.2f. Cannot return without payment.", 
+                                 daysOverdue, fineAmount);
         }
 
         // --- إتمام عملية الإرجاع ---
@@ -276,12 +220,9 @@ public class BookService {
         saveBooksToFile();
         
         String typeEmoji = (item instanceof Book) ? "📘" : "💿";
-        System.out.println(typeEmoji + " Item returned successfully and is now AVAILABLE!");
+        return typeEmoji + " Item returned successfully and is now AVAILABLE!";
     }
 
-    // =============================
-    //     البحث عبر ID
-    // =============================
     public media findMediaById(String id) {
         for (media m : items) {
             if (m.getId().equalsIgnoreCase(id)) return m;
@@ -293,9 +234,6 @@ public class BookService {
         return items;
     }
 
-    // =============================
-    //   جعل عنصر متأخر (للاختبار)
-    // =============================
     public void makeBookOverdue(String id, int days) {
         media m = findMediaById(id);
         if (m != null && m.isBorrowed()) {

@@ -1,6 +1,5 @@
 package main;
 
-
 import service.*;
 import model.*;
 
@@ -9,164 +8,191 @@ import java.util.Scanner;
 public class mymain {
 
     static Scanner scanner = new Scanner(System.in);
+    
+    // تعريف الثابت لتجنب التكرار في الرسائل (حل جزئي لمشكلة Duplication)
+    private static final String INVALID_INPUT_MSG = "❌ Invalid input or choice."; 
+    private static final String ADMIN_LOGIN_REQUIRED_MSG = "⚠ Please log in as Admin first!";
 
     // ===== Shared Services =====
     static AdminService adminService = new AdminService();
     static UserService userService = new UserService();
-    
-    // نمرر الخدمات لبعضها البعض حسب الحاجة (تأكد أن كونستركتور BookService عندك يستقبلهم)
-    // إذا كان BookService عندك لا يستقبل باراميترات، اجعلها: new BookService();
     static BookService bookService = new BookService(adminService, userService);
 
     public static void main(String[] args) {
 
         while (true) {
-            User loggedInUser = null;
+            User loggedInUser = handleLoginProcess(); // تم استخراج عملية الدخول
 
-            // ===== LOGIN LOOP =====
-            while (true) {
-                System.out.println("\n=== LIBRARY SYSTEM LOGIN ===");
-                System.out.print("Enter Username: ");
-                String username = scanner.nextLine();
-
-                System.out.print("Enter Password: ");
-                String password = scanner.nextLine();
-
-                // محاولة تسجيل الدخول
-                loggedInUser = userService.login(username, password, bookService);
-
-                if (loggedInUser != null) break;
+            if (loggedInUser != null) {
+                String role = loggedInUser.getRole();
+                switch (role.toLowerCase()) {
+                    case "admin":
+                        adminService.loginAdmin(loggedInUser);
+                        adminMenu();
+                        break;
+                    case "user":
+                        userMenu(loggedInUser);
+                        break;
+                    case "librarian":
+                        librarianMenu(loggedInUser);
+                        break;
+                    default:
+                        System.out.println("❌ Unknown role! Returning to login screen.");
+                }
             }
-
-            // تحديد الدور وتوجيه المستخدم للقائمة المناسبة
-            String role = loggedInUser.getRole();
-
-            switch (role.toLowerCase()) {
-                case "admin":
-                    adminService.loginAdmin(loggedInUser);
-                    adminMenu();
-                    break;
-
-                case "user":
-                    userMenu(loggedInUser);
-                    break;
-
-                case "librarian":
-                    librarianMenu(loggedInUser);
-                    break;
-
-                default:
-                    System.out.println("❌ Unknown role! Returning to login screen.");
-            }
-
             System.out.println("\n🔄 Returning to Login screen...\n");
         }
     }
+    
+    // ===============================================================
+    // دوال مساعدة رئيسية (لتقليل التعقيد في الدالة main)
+    // ===============================================================
 
-    // =================== ADMIN MENU ===================
+    private static User handleLoginProcess() {
+        while (true) {
+            System.out.println("\n=== LIBRARY SYSTEM LOGIN ===");
+            System.out.print("Enter Username: ");
+            String username = scanner.nextLine();
+
+            System.out.print("Enter Password: ");
+            String password = scanner.nextLine();
+
+            // نفترض أن دالة login سترجع null إذا فشل الدخول
+            User loggedInUser = userService.login(username, password, bookService);
+
+            if (loggedInUser != null) {
+                return loggedInUser;
+            }
+        }
+    }
+    
+    // دالة مساعدة لقراءة خيار القائمة والتعامل مع أخطاء الإدخال
+    private static int readMenuChoice() {
+        int choice = -1;
+        try {
+            choice = scanner.nextInt();
+            scanner.nextLine();
+            return choice;
+        } catch (Exception e) {
+            scanner.nextLine();
+            System.out.println(INVALID_INPUT_MSG);
+            return -1; 
+        }
+    }
+    
+    // =================== ADMIN MENU (تم تبسيطها) ===================
+    // التعقيد هنا انخفض كثيراً بفضل Extract Method
     public static void adminMenu() {
         while (true) {
-            System.out.println("\n===== ADMIN MENU =====");
-            System.out.println("1. Add Book");
-            System.out.println("2. Add CD"); 
-            System.out.println("3. Search Media");
-            System.out.println("4. Send Reminder Emails"); // ✅ تفعيل الخيار
-            System.out.println("5. Unregister User");
-            System.out.println("6. View All Media (Books & CDs)");
-            System.out.println("7. Logout");
-            System.out.println("======================");
-            System.out.print("Enter your choice: ");
+            displayAdminMenuOptions();
+            int choice = readMenuChoice();
 
-            int choice = -1;
-            try {
-                choice = scanner.nextInt();
-                scanner.nextLine(); // consume newline
-            } catch (Exception e) {
-                scanner.nextLine();
-                System.out.println("❌ Invalid input.");
-                continue;
-            }
+            if (choice == -1) continue;
 
             switch (choice) {
-                case 1:
-                    if (!adminService.isLoggedIn()) {
-                        System.out.println("⚠ Please log in as Admin first!");
-                        break;
-                    }
-                    System.out.print("Enter Book Title: ");
-                    String title = scanner.nextLine();
-                    System.out.print("Enter Author: ");
-                    String author = scanner.nextLine();
-                    System.out.print("Enter ISBN: ");
-                    String isbn = scanner.nextLine();
-                    bookService.addBook(title, author, isbn);
-                    break;
-
-                case 2:
-                    if (!adminService.isLoggedIn()) {
-                        System.out.println("⚠ Please log in as Admin first!");
-                        break;
-                    }
-                    System.out.print("Enter CD Title: ");
-                    String cdTitle = scanner.nextLine();
-                    System.out.print("Enter Artist: ");
-                    String artist = scanner.nextLine();
-                    System.out.print("Enter Barcode: ");
-                    String barcode = scanner.nextLine();
-                    bookService.addCD(cdTitle, artist, barcode);
-                    break;
-
-                case 3:
-                    System.out.print("Enter search keyword: ");
-                    String keyword = scanner.nextLine();
-                    bookService.searchBook(keyword);
-                    break;
-
-                case 4:
-                    // ✅ تم التعديل: استدعاء الدالة بشكل صحيح
-                  //  System.out.println("📧 Initiating email process...");
-                    adminService.sendOverdueReminders(userService, bookService);
-                    break;
-
-                case 5:
-                    System.out.println("\n=== Unregister User ===");
-                    System.out.print("Enter username to delete: ");
-                    String userToDelete = scanner.nextLine();
-                    
-                    adminService.unregisterUser(userToDelete, userService, bookService);
-                    break;
-
-                case 6:
-                    System.out.println("📚 All Media Status:");
-                    boolean hasItems = false;
-                    
-                    for (media m : bookService.getAllBooks()) { 
-                        hasItems = true;
-                        String status;
-                        if (m.isBorrowed()) {
-                            status = "🔴 Borrowed by " + (m.getBorrowedBy() != null ? m.getBorrowedBy().getName() : "Unknown") +
-                                     " | Due: " + m.getDueDate();
-                            if (m.isOverdue()) status += " ⚠ OVERDUE";
-                            if (m.isFineIssued()) status += " ($ Fine Calc)";
-                        } else {
-                            status = "🟢 Available";
-                        }
-                        System.out.println(m.toString() + " | " + status);
-                    }
-                    if (!hasItems) System.out.println("No items in library.");
-                    break;
-
-                case 7:
-                    adminService.logout();
-                    return;
-
-                default:
-                    System.out.println("❌ Invalid option, try again.");
+                case 1: handleAddBook(); break;
+                case 2: handleAddCD(); break;
+                case 3: handleSearchMedia(); break;
+                case 4: handleSendReminders(); break;
+                case 5: handleUnregisterUser(); break;
+                case 6: handleViewAllMedia(); break;
+                case 7: adminService.logout(); return;
+                default: System.out.println(INVALID_INPUT_MSG);
             }
         }
     }
 
- // =================== USER MENU ===================
+    // =================== دوال معالجة خيارات الإداري المستخرجة ===================
+
+    private static void displayAdminMenuOptions() {
+        System.out.println("\n===== ADMIN MENU =====");
+        System.out.println("1. Add Book");
+        System.out.println("2. Add CD");
+        System.out.println("3. Search Media");
+        System.out.println("4. Send Reminder Emails");
+        System.out.println("5. Unregister User");
+        System.out.println("6. View All Media (Books & CDs)");
+        System.out.println("7. Logout");
+        System.out.println("======================");
+        System.out.print("Enter your choice: ");
+    }
+
+    private static void handleAddBook() {
+        if (!adminService.isLoggedIn()) {
+            System.out.println(ADMIN_LOGIN_REQUIRED_MSG);
+            return;
+        }
+        System.out.print("Enter Book Title: ");
+        String title = scanner.nextLine();
+        System.out.print("Enter Author: ");
+        String author = scanner.nextLine();
+        System.out.print("Enter ISBN: ");
+        String isbn = scanner.nextLine();
+        
+        // الآن BookService تعيد رسالة، و mymain تطبعها (فصل اهتمامات)
+        String result = bookService.addBook(title, author, isbn);
+        System.out.println(result); 
+    }
+
+    private static void handleAddCD() {
+        if (!adminService.isLoggedIn()) {
+            System.out.println(ADMIN_LOGIN_REQUIRED_MSG);
+            return;
+        }
+        System.out.print("Enter CD Title: ");
+        String cdTitle = scanner.nextLine();
+        System.out.print("Enter Artist: ");
+        String artist = scanner.nextLine();
+        System.out.print("Enter Barcode: ");
+        String barcode = scanner.nextLine();
+        
+        String result = bookService.addCD(cdTitle, artist, barcode);
+        System.out.println(result);
+    }
+
+    private static void handleSearchMedia() {
+        System.out.print("Enter search keyword: ");
+        String keyword = scanner.nextLine();
+        bookService.searchBook(keyword);
+        // ملاحظة: دالة searchBook تحتاج أيضاً لأن لا تطبع شيئاً في الخدمة، بل ترجع قائمة نتائج ليتم طباعتها هنا.
+    }
+
+    private static void handleSendReminders() {
+        String result = adminService.sendOverdueReminders(userService, bookService);
+        System.out.println(result);
+    }
+
+    private static void handleUnregisterUser() {
+        System.out.println("\n=== Unregister User ===");
+        System.out.print("Enter username to delete: ");
+        String userToDelete = scanner.nextLine();
+        
+        String result = adminService.unregisterUser(userToDelete, userService, bookService);
+        System.out.println(result);
+    }
+
+    private static void handleViewAllMedia() {
+        System.out.println("📚 All Media Status:");
+        boolean hasItems = false;
+        
+        for (media m : bookService.getAllBooks()) { 
+            hasItems = true;
+            String status;
+            if (m.isBorrowed()) {
+                status = "🔴 Borrowed by " + (m.getBorrowedBy() != null ? m.getBorrowedBy().getName() : "Unknown") +
+                         " | Due: " + m.getDueDate();
+                if (m.isOverdue()) status += " ⚠ OVERDUE";
+                if (m.isFineIssued()) status += " ($ Fine Calc)";
+            } else {
+                status = "🟢 Available";
+            }
+            System.out.println(m.toString() + " | " + status);
+        }
+        if (!hasItems) System.out.println("No items in library.");
+    }
+
+
+ // =================== USER MENU (تم تبسيط استدعاء الخدمات) ===================
     public static void userMenu(User user) {
         while (true) {
             System.out.println("\n===== USER MENU (" + user.getName() + ") =====");
@@ -178,15 +204,7 @@ public class mymain {
             System.out.println("======================");
             System.out.print("Enter choice: ");
 
-            int choice = -1;
-            try {
-                choice = scanner.nextInt();
-                scanner.nextLine();
-            } catch (Exception e) {
-                scanner.nextLine();
-                System.out.println("❌ Invalid input.");
-                continue;
-            }
+            int choice = readMenuChoice();
 
             switch (choice) {
                 case 1:
@@ -196,7 +214,6 @@ public class mymain {
                     break;
 
                 case 2:
-                    // منع الاستعارة إذا كان عليه غرامات
                     if (user.getOutstandingFine() > 0) {
                         System.out.println("❌ BLOCKED: You cannot borrow items.");
                         System.out.println("💰 You have unpaid fines: $" + user.getOutstandingFine());
@@ -205,25 +222,22 @@ public class mymain {
                     }
                     System.out.print("Enter ISBN (Book) or Barcode (CD) to borrow: ");
                     String id = scanner.nextLine();
-                    bookService.borrowBook(user, id); 
+                    String borrowResult = bookService.borrowBook(user, id); 
+                    System.out.println(borrowResult); // طباعة النتيجة
                     break;
 
                 case 3:
-                    // 🔥 التعديل المطلوب هنا 🔥
-                    // شرط صارم: إذا الغرامة أكبر من صفر، ممنوع يرجع أي شيء
                     if (user.getOutstandingFine() > 0) {
                         System.out.println("❌ ACTION DENIED: You cannot return items while you have unpaid fines.");
                         System.out.println("💰 Your Outstanding Fine: $" + user.getOutstandingFine());
                         System.out.println("👉 Please go to Option 4 (Pay Fine) and clear your balance first.");
-                        break; // 🛑 خروج فوري من الكيس
+                        break; 
                     }
 
-                    // إذا وصل هنا، يعني رصيده نظيف (0 غرامات)
                     System.out.print("Enter ISBN or Barcode to return: ");
                     String returnId = scanner.nextLine();
-                    
-                    // استدعاء دالة الإرجاع التي ستجعل الكتاب Available في الملف
-                    bookService.returnBook(returnId, user);
+                    String returnResult = bookService.returnBook(returnId, user);
+                    System.out.println(returnResult); // طباعة النتيجة
                     break;
 
                 case 4:
@@ -236,11 +250,11 @@ public class mymain {
                         try {
                             double amount = scanner.nextDouble();
                             scanner.nextLine();
-                            // دالة الدفع التي ستصفر الغرامة
-                            userService.payFine(user, amount, bookService);
+                            String fineResult = userService.payFine(user, amount, bookService);
+                            System.out.println(fineResult); // طباعة النتيجة
                         } catch (Exception e) {
                             scanner.nextLine();
-                            System.out.println("❌ Invalid number.");
+                            System.out.println(INVALID_INPUT_MSG);
                         }
                     }
                     break;
@@ -250,10 +264,11 @@ public class mymain {
                     return;
 
                 default:
-                    System.out.println("❌ Invalid choice.");
+                    System.out.println(INVALID_INPUT_MSG);
             }
         }
     }
+ 
     // =================== LIBRARIAN MENU ===================
     public static void librarianMenu(User librarian) {
         LibrarianService librarianService = new LibrarianService();

@@ -16,15 +16,17 @@ public class ReminderService {
         this.userService = userService;
     }
 
-    public void sendOverdueReminders(List<media> allMedia) {
-        System.out.println("📧 Calculating overdue items per user...");
+    // 🔴 تم التعديل: أصبح يعيد int (عدد التذكيرات المرسلة)
+    public int sendOverdueReminders(List<media> allMedia) {
+        // العداد الذي سيتم إرجاعه
+        int remindersSentCount = 0; 
+        
         LocalDate today = LocalDate.now();
-        boolean sentAny = false;
 
         // 1. ندور على كل المستخدمين المسجلين في النظام
         for (User user : userService.getAllUsers()) {
             
-            // 🛑 شرط: نبعت فقط لليوزرز (مش للأدمن ولا الموظف)
+            // شرط: نبعت فقط لليوزرز (مش للأدمن ولا الموظف)
             if (!"User".equalsIgnoreCase(user.getRole())) {
                 continue; 
             }
@@ -48,7 +50,6 @@ public class ReminderService {
                     overdueCount++;
                     long daysOverdue = ChronoUnit.DAYS.between(item.getDueDate(), today);
                     
-                    // ✅ التعديل هنا: جلب النوع (Book أو CD)
                     String type = item.getClass().getSimpleName(); 
                     
                     // إضافته للرسالة بالشكل: - [Book] Title ...
@@ -58,19 +59,19 @@ public class ReminderService {
 
             // 3. إذا كان لدى المستخدم عناصر متأخرة، نرسل الإيميل المجمع
             if (overdueCount > 0) {
-                // النص المطلوب مع الساعة الرملية
                 String header = "⏳ You have " + overdueCount + " overdue item(s).";
                 
                 String fullMessage = header + "\n\nDetails:\n" + messageDetails.toString();
                 
                 // إرسال الإيميل
                 observer.update(user, fullMessage);
-                sentAny = true;
+                remindersSentCount++; // 🛑 زيادة العداد
             }
         }
         
-        if (!sentAny) {
-            System.out.println("✅ No overdue emails needed today.");
-        }
+        // تم إزالة الطباعة التي كانت هنا (✅ No overdue emails needed today)
+        // لأن الطباعة يجب أن تكون في mymain.java
+        
+        return remindersSentCount; // 🛑 إرجاع العداد
     }
 }
