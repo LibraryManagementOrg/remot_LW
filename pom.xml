@@ -9,9 +9,14 @@
   <properties>
       <maven.compiler.source>17</maven.compiler.source>
       <maven.compiler.target>17</maven.compiler.target>
+      
+      <!-- إعدادات SonarCloud -->
       <sonar.organization>librarymanagementorg</sonar.organization>
       <sonar.host.url>https://sonarcloud.io</sonar.host.url>
       <sonar.projectKey>librarymanagementorg_remot_LW</sonar.projectKey>
+      
+      <!-- هذا السطر هو المسؤول عن قراءة ملف الكافريج -->
+      <sonar.coverage.jacoco.xmlReportPaths>${project.basedir}/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
   </properties>
 
   <dependencies>
