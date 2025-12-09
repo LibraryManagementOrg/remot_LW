@@ -51,9 +51,7 @@ public class mymain {
     }
     
     // ===============================================================
-    // دوال مساعدة رئيسية (لحل مشكلة التعقيد)
-    // ===============================================================
-
+ 
     private static User handleLoginProcess() {
         while (true) {
             System.out.println("\n=== LIBRARY SYSTEM LOGIN ===");
