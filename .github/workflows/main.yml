@@ -20,17 +20,15 @@ jobs:
         with:
           java-version: 17
           distribution: 'zulu'
-          # تفعيل كاش ميفن هنا يغني عن الخطوات اليدوية السابقة
           cache: 'maven'
 
       - name: Build and analyze
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        # تم إضافة كل التعريفات الضرورية لضمان عدم فشل العملية
         run: |
           mvn -B clean jacoco:prepare-agent verify jacoco:report sonar:sonar \
-            -Dsonar.projectKey=librarymanagementorg_remot_LW \
+            -Dsonar.projectKey=LibraryManagementOrg_remot_LW \
             -Dsonar.organization=librarymanagementorg \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.branch.name=master \
