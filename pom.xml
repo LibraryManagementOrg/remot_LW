@@ -10,13 +10,10 @@
       <maven.compiler.source>17</maven.compiler.source>
       <maven.compiler.target>17</maven.compiler.target>
       
-      <!-- إعدادات SonarCloud -->
+      <!-- إعدادات SonarCloud الخاصة بمشروعك -->
       <sonar.organization>librarymanagementorg</sonar.organization>
       <sonar.host.url>https://sonarcloud.io</sonar.host.url>
       <sonar.projectKey>librarymanagementorg_remot_LW</sonar.projectKey>
-      
-      <!-- هذا السطر هو أهم شيء عشان النسبة تظهر -->
-      <sonar.coverage.jacoco.xmlReportPaths>${project.basedir}/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
   </properties>
 
   <dependencies>
@@ -47,20 +44,21 @@
 
   <build>
     <plugins>
-        <!-- هذا البلجن هو اللي بيعمل حساب لنسبة الكافريج -->
+        <!-- إعدادات JaCoCo مثل الصورة تماماً -->
         <plugin>
             <groupId>org.jacoco</groupId>
             <artifactId>jacoco-maven-plugin</artifactId>
             <version>0.8.8</version>
             <executions>
                 <execution>
+                    <id>prepare-agent</id>
                     <goals>
                         <goal>prepare-agent</goal>
                     </goals>
                 </execution>
                 <execution>
                     <id>report</id>
-                    <phase>test</phase>
+                    <phase>verify</phase>
                     <goals>
                         <goal>report</goal>
                     </goals>
@@ -71,6 +69,11 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
             <version>3.0.0</version>
+        </plugin>
+        <plugin>
+             <groupId>org.sonarsource.scanner.maven</groupId>
+             <artifactId>sonar-maven-plugin</artifactId>
+             <version>3.9.1.2184</version>
         </plugin>
     </plugins>
   </build>
