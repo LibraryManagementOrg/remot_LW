@@ -9,9 +9,7 @@ public class mymain {
 
     static Scanner scanner = new Scanner(System.in);
     
-    // متغير للتحكم في استمرار عمل التطبيق (لحل مشكلة Blocker)
-    private static boolean isRunning = true; 
-    
+    // تعريف الثابت لتجنب التكرار في الرسائل (حل جزئي لمشكلة Duplication)
     private static final String INVALID_INPUT_MSG = "❌ Invalid input or choice."; 
     private static final String ADMIN_LOGIN_REQUIRED_MSG = "⚠ Please log in as Admin first!";
 
@@ -22,12 +20,9 @@ public class mymain {
 
     public static void main(String[] args) {
 
-        while (isRunning) { // 🛑 تم تعديل while(true) إلى while(isRunning)
+        while (true) {
             User loggedInUser = handleLoginProcess(); // تم استخراج عملية الدخول
 
-            
-            
-            
             if (loggedInUser != null) {
                 String role = loggedInUser.getRole();
                 switch (role.toLowerCase()) {
@@ -45,13 +40,8 @@ public class mymain {
                         System.out.println("❌ Unknown role! Returning to login screen.");
                 }
             }
-            
-            // إذا كان loggedInUser null وكان الخروج عبر خيار 0
-            if (isRunning) {
-                System.out.println("\n🔄 Returning to Login screen...\n");
-            }
+            System.out.println("\n🔄 Returning to Login screen...\n");
         }
-        System.out.println("👋 Thank you for using the Library System. Goodbye!");
     }
     
     // ===============================================================
@@ -61,19 +51,13 @@ public class mymain {
     private static User handleLoginProcess() {
         while (true) {
             System.out.println("\n=== LIBRARY SYSTEM LOGIN ===");
-            System.out.println("0. Exit System"); // 🛑 إضافة خيار الخروج
-            System.out.print("Enter Username (or 0 to Exit): ");
-            String input = scanner.nextLine();
-            
-            if ("0".equals(input.trim())) {
-                isRunning = false; // 🛑 تغيير حالة التطبيق للخروج
-                return null;
-            }
+            System.out.print("Enter Username: ");
+            String username = scanner.nextLine();
 
-            String username = input;
             System.out.print("Enter Password: ");
             String password = scanner.nextLine();
 
+            // نفترض أن دالة login سترجع null إذا فشل الدخول
             User loggedInUser = userService.login(username, password, bookService);
 
             if (loggedInUser != null) {
@@ -97,6 +81,7 @@ public class mymain {
     }
     
     // =================== ADMIN MENU (تم تبسيطها) ===================
+    // التعقيد هنا انخفض كثيراً بفضل Extract Method
     public static void adminMenu() {
         while (true) {
             displayAdminMenuOptions();
@@ -111,16 +96,14 @@ public class mymain {
                 case 4: handleSendReminders(); break;
                 case 5: handleUnregisterUser(); break;
                 case 6: handleViewAllMedia(); break;
-                case 7: 
-                    adminService.logout(); 
-                    return; // 🛑 الخروج من adminMenu والعودة لـ main
+                case 7: adminService.logout(); return;
                 default: System.out.println(INVALID_INPUT_MSG);
             }
         }
     }
 
     // =================== دوال معالجة خيارات الإداري المستخرجة ===================
-    // (بقية الدوال تبقى كما هي)
+
     private static void displayAdminMenuOptions() {
         System.out.println("\n===== ADMIN MENU =====");
         System.out.println("1. Add Book");
@@ -146,6 +129,7 @@ public class mymain {
         System.out.print("Enter ISBN: ");
         String isbn = scanner.nextLine();
         
+        // الآن BookService تعيد رسالة، و mymain تطبعها (فصل اهتمامات)
         String result = bookService.addBook(title, author, isbn);
         System.out.println(result); 
     }
@@ -170,6 +154,7 @@ public class mymain {
         System.out.print("Enter search keyword: ");
         String keyword = scanner.nextLine();
         bookService.searchBook(keyword);
+        // ملاحظة: دالة searchBook تحتاج أيضاً لأن لا تطبع شيئاً في الخدمة، بل ترجع قائمة نتائج ليتم طباعتها هنا.
     }
 
     private static void handleSendReminders() {
