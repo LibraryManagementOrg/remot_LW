@@ -9,7 +9,7 @@ public class mymain {
 
     static Scanner scanner = new Scanner(System.in);
     
-    // 🛑 1. إضافة متغير للتحكم في استمرار عمل التطبيق (لحل مشكلة Blocker)
+    // متغير للتحكم في استمرار عمل التطبيق (لحل مشكلة Blocker)
     private static boolean isRunning = true; 
     
     private static final String INVALID_INPUT_MSG = "❌ Invalid input or choice."; 
@@ -43,6 +43,7 @@ public class mymain {
                 }
             }
             
+            // إذا كان loggedInUser null وكان الخروج عبر خيار 0
             if (isRunning) {
                 System.out.println("\n🔄 Returning to Login screen...\n");
             }
@@ -50,6 +51,8 @@ public class mymain {
         System.out.println("👋 Thank you for using the Library System. Goodbye!");
     }
     
+    // ===============================================================
+    // دوال مساعدة رئيسية (لتقليل التعقيد في الدالة main)
     // ===============================================================
 
     private static User handleLoginProcess() {
@@ -106,17 +109,15 @@ public class mymain {
                 case 5: handleUnregisterUser(); break;
                 case 6: handleViewAllMedia(); break;
                 case 7: 
-                    // 🛑 الخروج من adminMenu والعودة لـ main
-                    String logoutResult = adminService.logout(); 
-                    System.out.println(logoutResult);
-                    return; 
+                    adminService.logout(); 
+                    return; // 🛑 الخروج من adminMenu والعودة لـ main
                 default: System.out.println(INVALID_INPUT_MSG);
             }
         }
     }
 
     // =================== دوال معالجة خيارات الإداري المستخرجة ===================
-
+    // (بقية الدوال تبقى كما هي)
     private static void displayAdminMenuOptions() {
         System.out.println("\n===== ADMIN MENU =====");
         System.out.println("1. Add Book");
@@ -165,7 +166,6 @@ public class mymain {
     private static void handleSearchMedia() {
         System.out.print("Enter search keyword: ");
         String keyword = scanner.nextLine();
-        // بما أن searchBook تطبع النتائج، نبقيها هكذا
         bookService.searchBook(keyword);
     }
 
@@ -272,9 +272,8 @@ public class mymain {
                     break;
 
                 case 5:
-                    String logoutResult = userService.logout();
-                    System.out.println(logoutResult);
-                    return; // 🛑 الخروج من userMenu والعودة لـ main
+                    userService.logout();
+                    return;
 
                 default:
                     System.out.println(INVALID_INPUT_MSG);
@@ -295,7 +294,15 @@ public class mymain {
             System.out.println("===========================");
             System.out.print("Enter choice: ");
 
-            int choice = readMenuChoice();
+            int choice = -1;
+            try {
+                choice = scanner.nextInt();
+                scanner.nextLine();
+            } catch (Exception e) {
+                scanner.nextLine();
+                System.out.println("❌ Invalid input.");
+                continue;
+            }
 
             switch (choice) {
                 case 1:
@@ -311,7 +318,7 @@ public class mymain {
 
                 case 3:
                     librarianService.logout();
-                    return; // 🛑 الخروج من librarianMenu والعودة لـ main
+                    return;
 
                 default:
                     System.out.println("❌ Invalid choice.");
