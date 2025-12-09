@@ -10,23 +10,22 @@
       <maven.compiler.source>17</maven.compiler.source>
       <maven.compiler.target>17</maven.compiler.target>
       
-      <!-- إعدادات SonarCloud الخاصة بمشروعك -->
+      <!-- إعدادات SonarCloud -->
       <sonar.organization>librarymanagementorg</sonar.organization>
       <sonar.host.url>https://sonarcloud.io</sonar.host.url>
-      <sonar.projectKey>LibraryManagementOrg_remot_LW</sonar.projectKey>
+      <sonar.projectKey>librarymanagementorg_remot_LW</sonar.projectKey>
+      
+      <!-- تحديد مسار تقرير JaCoCo يدوياً لضمان قراءته -->
+      <sonar.coverage.jacoco.xmlReportPaths>${project.basedir}/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
   </properties>
 
   <dependencies>
+    <!-- مكتبات الاختبار -->
     <dependency>
         <groupId>org.junit.jupiter</groupId>
         <artifactId>junit-jupiter</artifactId>
         <version>5.9.2</version>
         <scope>test</scope>
-    </dependency>
-    <dependency>
-        <groupId>com.sun.mail</groupId>
-        <artifactId>javax.mail</artifactId>
-        <version>1.6.2</version>
     </dependency>
     <dependency>
         <groupId>org.mockito</groupId>
@@ -40,11 +39,25 @@
         <version>5.3.1</version>
         <scope>test</scope>
     </dependency>
+    
+    <!-- مكتبات أخرى -->
+    <dependency>
+        <groupId>com.sun.mail</groupId>
+        <artifactId>javax.mail</artifactId>
+        <version>1.6.2</version>
+    </dependency>
   </dependencies>
 
   <build>
     <plugins>
-        <!-- إعدادات JaCoCo مثل الصورة تماماً -->
+        <!-- Maven Surefire Plugin لتشغيل التستات -->
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <version>3.0.0</version>
+        </plugin>
+
+        <!-- JaCoCo Plugin: المسؤول عن التغطية -->
         <plugin>
             <groupId>org.jacoco</groupId>
             <artifactId>jacoco-maven-plugin</artifactId>
@@ -58,22 +71,12 @@
                 </execution>
                 <execution>
                     <id>report</id>
-                    <phase>verify</phase>
+                    <phase>test</phase>
                     <goals>
                         <goal>report</goal>
                     </goals>
                 </execution>
             </executions>
-        </plugin>
-        <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <version>3.0.0</version>
-        </plugin>
-        <plugin>
-             <groupId>org.sonarsource.scanner.maven</groupId>
-             <artifactId>sonar-maven-plugin</artifactId>
-             <version>3.9.1.2184</version>
         </plugin>
     </plugins>
   </build>

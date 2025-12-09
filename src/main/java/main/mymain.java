@@ -23,6 +23,9 @@ public class mymain {
         while (true) {
             User loggedInUser = handleLoginProcess(); // تم استخراج عملية الدخول
 
+            
+            
+            
             if (loggedInUser != null) {
                 String role = loggedInUser.getRole();
                 switch (role.toLowerCase()) {
