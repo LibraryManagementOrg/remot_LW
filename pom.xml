@@ -15,7 +15,7 @@
       <sonar.host.url>https://sonarcloud.io</sonar.host.url>
       <sonar.projectKey>librarymanagementorg_remot_LW</sonar.projectKey>
       
-      <!-- هذا السطر هو المسؤول عن قراءة ملف الكافريج -->
+      <!-- هذا السطر هو أهم شيء عشان النسبة تظهر -->
       <sonar.coverage.jacoco.xmlReportPaths>${project.basedir}/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
   </properties>
 
@@ -47,6 +47,7 @@
 
   <build>
     <plugins>
+        <!-- هذا البلجن هو اللي بيعمل حساب لنسبة الكافريج -->
         <plugin>
             <groupId>org.jacoco</groupId>
             <artifactId>jacoco-maven-plugin</artifactId>
