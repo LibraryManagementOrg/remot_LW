@@ -39,5 +39,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        # هذا الأمر هو المفتاح، تم كتابته مثل الصورة ليجبر التقرير على الظهور
-        run: mvn -B clean jacoco:prepare-agent verify jacoco:report org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=librarymanagementorg_remot_LW
+        # الأمر التالي يقوم بالتالي بالترتيب:
+        # 1. ينظف المشروع (clean)
+        # 2. يجهز JaCoCo (jacoco:prepare-agent)
+        # 3. يشغل التستات (verify)
+        # 4. ينشئ التقرير يدوياً (jacoco:report) <-- هذا الأهم
+        # 5. يرفع النتيجة لسونار (sonar:sonar)
+        run: mvn -B clean jacoco:prepare-agent verify jacoco:report sonar:sonar -Dsonar.projectKey=librarymanagementorg_remot_LW
