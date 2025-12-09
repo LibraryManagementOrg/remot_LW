@@ -43,9 +43,6 @@ class AdminServiceTest {
         System.setOut(originalOut);
     }
 
-    // =================================================================
-    // 1. اختبار تسجيل الدخول والخروج (Login & Logout)
-    // =================================================================
     
     @Test
     @DisplayName("Login: Success with Admin User")

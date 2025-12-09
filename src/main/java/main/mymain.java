@@ -25,6 +25,9 @@ public class mymain {
         while (isRunning) { // 🛑 تم تعديل while(true) إلى while(isRunning)
             User loggedInUser = handleLoginProcess(); // تم استخراج عملية الدخول
 
+            
+            
+            
             if (loggedInUser != null) {
                 String role = loggedInUser.getRole();
                 switch (role.toLowerCase()) {
