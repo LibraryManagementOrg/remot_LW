@@ -20,16 +20,18 @@ jobs:
         with:
           java-version: 17
           distribution: 'zulu'
-          # استخدام خاصية الكاش المدمجة لـ setup-java لتجنب تضارب الكاش اليدوي
-          cache: 'maven' 
-
-      # إزالة خطوات Cache SonarCloud و Cache Maven اليدوية لأن setup-java handles maven cache
+          # تفعيل كاش ميفن هنا يغني عن الخطوات اليدوية السابقة
+          cache: 'maven'
 
       - name: Build and analyze
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        # تم إضافة كل التعريفات الضرورية لضمان عدم فشل العملية
         run: |
           mvn -B clean jacoco:prepare-agent verify jacoco:report sonar:sonar \
             -Dsonar.projectKey=librarymanagementorg_remot_LW \
-            -Dsonar.branch.name=master
+            -Dsonar.organization=librarymanagementorg \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.branch.name=master \
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
