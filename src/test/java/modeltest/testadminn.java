@@ -10,64 +10,61 @@ import model.Admin;
 class testadminn {
 
     @Test
-    @DisplayName("Test Constructor and Getters with valid data")
-    void testAdminCreation() {
+    @DisplayName("Test Constructor and Getters")
+    void testAdminInitialization() {
         // Arrange
-        String expectedUsername = "superAdmin";
-        String expectedPassword = "securePassword123";
+        String username = "adminUser";
+        String password = "adminPassword";
 
         // Act
-        Admin admin = new Admin(expectedUsername, expectedPassword);
+        Admin admin = new Admin(username, password);
 
         // Assert
-        // استخدام assertAll يضمن فحص الخاصيتين معاً ويعطي تقريراً كاملاً
-        assertAll("Valid Data",
-            () -> assertNotNull(admin, "Admin object should be created"),
-            () -> assertEquals(expectedUsername, admin.getUsername(), "Username should match"),
-            () -> assertEquals(expectedPassword, admin.getPassword(), "Password should match")
-        );
+        assertNotNull(admin);
+        assertEquals(username, admin.getUsername());
+        assertEquals(password, admin.getPassword());
     }
 
+    // 👇 هذا الجزء مهم جداً لزيادة الكافريج إذا كان عندك دوال Setters 👇
+    /*
     @Test
-    @DisplayName("Test Admin with empty strings")
-    void testAdminWithEmptyData() {
-        // Act
-        Admin admin = new Admin("", "");
-        
-        // Assert
-        assertAll("Empty Strings",
-            () -> assertEquals("", admin.getUsername()),
-            () -> assertEquals("", admin.getPassword())
-        );
-    }
-
-    @Test
-    @DisplayName("Test Admin with null values")
-    void testAdminWithNulls() {
-        // Act
-        Admin admin = new Admin(null, null);
-        
-        // Assert
-        assertAll("Null Values",
-            () -> assertNull(admin.getUsername(), "Username should be null"),
-            () -> assertNull(admin.getPassword(), "Password should be null")
-        );
-    }
-
-    @Test
-    @DisplayName("Test Admin with special characters and spaces")
-    void testAdminWithSpecialChars() {
+    @DisplayName("Test Setters")
+    void testSetters() {
         // Arrange
-        String userWithSpace = "User Name";
-        String passWithChars = "Pass@123 #!";
+        Admin admin = new Admin("oldUser", "oldPass");
 
         // Act
-        Admin admin = new Admin(userWithSpace, passWithChars);
+        admin.setUsername("newUser");
+        admin.setPassword("newPass");
 
         // Assert
-        assertAll("Special Characters",
-            () -> assertEquals(userWithSpace, admin.getUsername()),
-            () -> assertEquals(passWithChars, admin.getPassword())
-        );
+        assertEquals("newUser", admin.getUsername());
+        assertEquals("newPass", admin.getPassword());
+    }
+    */
+
+    // 👇 هذا التست عشان يغطي دالة toString إذا كانت موجودة (غالباً بتنسيها) 👇
+    /*
+    @Test
+    @DisplayName("Test toString method")
+    void testToString() {
+        Admin admin = new Admin("user", "pass");
+        String result = admin.toString();
+        
+        assertNotNull(result);
+        assertTrue(result.contains("user"));
+    }
+    */
+    
+    @Test
+    @DisplayName("Test Edge Cases (Nulls and Empty)")
+    void testEdgeCases() {
+        Admin emptyAdmin = new Admin("", "");
+        assertEquals("", emptyAdmin.getUsername());
+        assertEquals("", emptyAdmin.getPassword());
+
+        Admin nullAdmin = new Admin(null, null);
+        assertNull(nullAdmin.getUsername());
+        assertNull(nullAdmin.getPassword());
     }
 }
