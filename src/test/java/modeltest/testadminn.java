@@ -16,12 +16,11 @@ class testadminn {
         String expectedUsername = "superAdmin";
         String expectedPassword = "securePassword123";
 
-        // Act
+        // Act (يغطي الباني ودوائل Getters)
         Admin admin = new Admin(expectedUsername, expectedPassword);
 
         // Assert
-        // استخدام assertAll يضمن فحص الخاصيتين معاً ويعطي تقريراً كاملاً
-        assertAll("Valid Data",
+        assertAll("Valid Data Check",
             () -> assertNotNull(admin, "Admin object should be created"),
             () -> assertEquals(expectedUsername, admin.getUsername(), "Username should match"),
             () -> assertEquals(expectedPassword, admin.getPassword(), "Password should match")
@@ -31,11 +30,11 @@ class testadminn {
     @Test
     @DisplayName("Test Admin with empty strings")
     void testAdminWithEmptyData() {
-        // Act
+        // Act (يغطي الباني ودوائل Getters)
         Admin admin = new Admin("", "");
         
         // Assert
-        assertAll("Empty Strings",
+        assertAll("Empty Strings Check",
             () -> assertEquals("", admin.getUsername()),
             () -> assertEquals("", admin.getPassword())
         );
@@ -44,11 +43,11 @@ class testadminn {
     @Test
     @DisplayName("Test Admin with null values")
     void testAdminWithNulls() {
-        // Act
+        // Act (يغطي الباني ودوائل Getters)
         Admin admin = new Admin(null, null);
         
         // Assert
-        assertAll("Null Values",
+        assertAll("Null Values Check",
             () -> assertNull(admin.getUsername(), "Username should be null"),
             () -> assertNull(admin.getPassword(), "Password should be null")
         );
@@ -61,11 +60,11 @@ class testadminn {
         String userWithSpace = "User Name";
         String passWithChars = "Pass@123 #!";
 
-        // Act
+        // Act (يغطي الباني ودوائل Getters)
         Admin admin = new Admin(userWithSpace, passWithChars);
 
         // Assert
-        assertAll("Special Characters",
+        assertAll("Special Characters Check",
             () -> assertEquals(userWithSpace, admin.getUsername()),
             () -> assertEquals(passWithChars, admin.getPassword())
         );
