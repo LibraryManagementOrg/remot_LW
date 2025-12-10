@@ -5,7 +5,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import model.Admin;
 
-class testadminn {
+class AdminTest {
 
     @Test
     @DisplayName("Test Constructor and Getters")
