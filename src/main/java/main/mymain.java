@@ -1,4 +1,4 @@
-/*package main;
+package main;
 
 import service.*;
 import model.*;
@@ -316,4 +316,4 @@ public class mymain {
             }
         }
     }
-}*/
+}

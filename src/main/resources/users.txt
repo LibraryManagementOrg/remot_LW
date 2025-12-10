@@ -1,4 +1,4 @@
-ahmad,1234,User,10.0,ahmad@example.com
+ahmad,1234,User,0.0,ahmad@example.com
 sam,1234,Librarian,0.0,sam@test.com
 waad,4444,User,0.0,s12217555@stu.najah.edu
 layal,1234,Admin,0.0,s12218557@stu.najah.edu

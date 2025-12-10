@@ -1,4 +1,4 @@
-BOOK;frfcsdf;3rf3w;2345;true;2025-11-29;ahmad;true
+BOOK;frfcsdf;3rf3w;2345;false;null;null;false
 CD;frfe;fw433;24242;false;null;null;false
 CD;rgrg;r3wr;12345;false;null;null;false
 BOOK;frfe;fw433;24242;false;null;null;false
@@ -6,4 +6,4 @@ BOOK;TestBook;TestAuthor;999-999;false;null;null;false
 BOOK;BookTitle;Author;123-ABC;false;null;null;false
 BOOK;T1;A1;111;false;null;null;false
 CD;CD1;Artist1;999;false;null;null;false
-CD;BestHits;Art;888;false;null;null;false
+CD;BestHits;Art;888;true;2025-12-17;ahmad;false
